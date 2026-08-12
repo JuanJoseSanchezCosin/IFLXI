@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IFLXI — La plataforma mundial de datos de fútbol</title>
+<meta name="description" content="Más de 500.000 jugadores, 20.000 equipos y 200 ligas en una sola plataforma. Valores de mercado, estadísticas avanzadas y análisis con inteligencia artificial.">
+<meta name="theme-color" content="#f3f5f9">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="brand/favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="brand/site.webmanifest">
+<meta property="og:image" content="brand/og-image.png">
+
+<script>
+(() => { try { if (localStorage.getItem("iflxi-theme") === "dark") document.documentElement.setAttribute("data-theme", "dark"); } catch (_) {} })();
+</script>
+
+<meta property="og:title" content="IFLXI — La plataforma mundial de datos de fútbol">
+<meta property="og:description" content="Datos, valores de mercado y scouting con IA de todo el fútbol mundial.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body data-page="home">
+
+<div class="aurora"></div>
+<div class="grid-bg"></div>
+
+<!-- ===================== HEADER ===================== -->
+<header class="header header--lab">
+  <div class="header__top">
+    <div class="container header__top-inner">
+      <div class="header__brand">
+        <a class="logo" href="index.html" aria-label="IFLXI inicio">
+          <img class="logo__img logo__img--for-light" src="brand/logo-dark-320.png" alt="IFLXI" width="120" height="48">
+          <img class="logo__img logo__img--for-dark" src="brand/logo-white-320.png" alt="IFLXI" width="120" height="48">
+        </a>
+        <span class="live-pill" title="Datos en tiempo real"><span class="dot"></span> EN VIVO</span>
+      </div>
+
+      <div class="header-search searchbox">
+        <svg class="header-search__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="global-search" autocomplete="off" spellcheck="false"
+               placeholder="Buscar jugador, club o liga…" aria-label="Buscar jugadores, equipos o ligas">
+        <kbd class="header-search__kbd">/</kbd>
+        <div class="results" role="listbox"></div>
+      </div>
+
+      <div class="header__actions">
+        <nav class="social-links social-links--header" aria-label="Redes sociales IFLXI">
+          <a href="https://www.instagram.com/iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Instagram @iflxi_official" title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+          <a href="https://x.com/IFLXI_Official" target="_blank" rel="noopener noreferrer" aria-label="X @IFLXI_Official" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.995-9.212L2.25 2.25h6.893l4.237 5.647L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg></a>
+          <a href="https://www.tiktok.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="TikTok @iflxi_official" title="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+          <a href="https://www.threads.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Threads @iflxi_official" title="Threads"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01L1.466 12c.028-3.576.879-6.43 2.525-8.482C5.845 1.205 8.597.024 12.18 0h.014c3.582.024 6.334 1.205 8.183 3.518 1.646 2.051 2.496 4.905 2.496 8.261v.013c-.024 3.581-1.205 6.334-3.518 8.183C18.34 22.795 15.586 23.976 12.186 24M8.14 12.001c0-2.237 1.326-3.727 3.435-3.727S15.01 9.764 15.01 12s-1.326 3.727-3.435 3.727S8.14 14.238 8.14 12m3.435-5.54c-3.19 0-5.25 2.07-5.25 5.54s2.06 5.54 5.25 5.54 5.25-2.07 5.25-5.54-2.06-5.54-5.25-5.54"/></svg></a>
+        </nav>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema claro/oscuro" title="Tema">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a class="btn btn--sm btn--ghost header__login" href="cuenta.html">Entrar</a>
+        <a class="btn btn--primary btn--sm header__cta" href="cuenta.html">Iniciar sesión</a>
+        <button class="burger" aria-label="Abrir menú" aria-expanded="false"><span></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="header__bar">
+    <div class="container header__bar-inner">
+      <nav class="nav" id="site-nav">
+        <a href="index.html" data-nav="home">Descubre</a>
+        <a href="#fichajes">Fichajes y rumores</a>
+        <a href="#mercado">Valores de mercado</a>
+        <a href="#directo">En directo</a>
+        <a href="competiciones.html" data-nav="competitions">Competiciones</a>
+        <a href="comparador.html" data-nav="compare">Comparador</a>
+        <a href="cuenta.html">Cuenta</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===================== HERO / NOTICIAS ===================== -->
+  <section class="hero" id="buscador">
+    <div class="container hero__inner">
+      <div class="tm-news hero__news" id="noticias">
+        <div class="tm-news__head">
+          <h2>Noticias</h2>
+          <span class="tm-news__live"><span class="dot"></span> Última hora</span>
+        </div>
+        <div class="tm-news__ticker" aria-hidden="true">
+          <div class="tm-news__ticker-track" id="news-ticker-track"></div>
+        </div>
+        <div class="tm-news__grid" id="news-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FICHAJES (estilo TM) ===================== -->
+  <section class="section" id="fichajes">
+    <div class="container">
+      <div class="section-head section-head--tm">
+        <h2>Fichajes</h2>
+      </div>
+      <div class="market-split market-split--tm">
+        <nav class="tm-subnav" aria-label="Atajos de fichajes">
+          <a class="tm-subnav__item is-active" href="#fichajes" aria-current="page">Recomendaciones</a>
+          <a class="tm-subnav__item" href="#fichajes">
+            <span class="tm-subnav__logo-wrap"><img class="tm-subnav__logo" src="img/leagues/premier.png?v=5" alt="" loading="lazy"></span>
+            Top Premier
+          </a>
+          <a class="tm-subnav__item" href="#fichajes">
+            <span class="tm-subnav__logo-wrap"><img class="tm-subnav__logo" src="img/leagues/laliga.png?v=5" alt="" loading="lazy"></span>
+            Top LaLiga
+          </a>
+          <a class="tm-subnav__item" href="#fichajes">
+            <span class="tm-subnav__logo-wrap"><img class="tm-subnav__logo" src="img/leagues/seriea.png?v=5" alt="" loading="lazy"></span>
+            Top Serie A
+          </a>
+          <a class="tm-subnav__item" href="#fichajes">
+            <span class="tm-subnav__logo-wrap"><img class="tm-subnav__logo" src="img/leagues/bundesliga.png?v=5" alt="" loading="lazy"></span>
+            Top Bundesliga
+          </a>
+          <a class="tm-subnav__item" href="#fichajes">
+            <span class="tm-subnav__logo-wrap"><img class="tm-subnav__logo" src="img/leagues/ligue1.png?v=5" alt="" loading="lazy"></span>
+            Top Ligue 1
+          </a>
+        </nav>
+        <div class="tm-subnav-spacer" aria-hidden="true"></div>
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head">
+            <h3>Últimos fichajes</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data data--tm">
+              <thead>
+                <tr>
+                  <th>Jugador/Posición</th>
+                  <th class="th-center">De → A</th>
+                  <th>Coste</th>
+                </tr>
+              </thead>
+              <tbody id="transfers-body"></tbody>
+            </table>
+          </div>
+          <div class="tm-panel__foot"><a href="#fichajes">Todos los fichajes →</a></div>
+        </div>
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head">
+            <h3>Rumores actuales</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data data--tm">
+              <thead>
+                <tr>
+                  <th>Jugador/Club</th>
+                  <th class="th-center">Interesado</th>
+                  <th class="th-pct">%</th>
+                </tr>
+              </thead>
+              <tbody id="rumors-body"></tbody>
+            </table>
+          </div>
+          <div class="tm-panel__foot"><a href="#fichajes">Ir a la fábrica de rumores →</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PARTIDOS EN DIRECTO ===================== -->
+  <section class="section section--tight" id="directo">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">En vivo</span>
+          <h2>Partidos en directo</h2>
+          <p>Lo que se está jugando ahora mismo.</p>
+        </div>
+        <a class="btn btn--sm btn--primary" href="partidos.html">Ver todos los partidos del día</a>
+      </div>
+      <div class="live-grid" id="live-matches"></div>
+    </div>
+  </section>
+
+  <!-- ===================== TOP 10 VALOR ===================== -->
+  <section class="section" id="mercado">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Valores de mercado</span>
+          <h2>Top 10 más valiosos</h2>
+          <p>Los jugadores con mayor valoración en IFLXI.</p>
+        </div>
+        <a class="btn btn--sm btn--primary" href="comparador.html">Abrir comparador</a>
+      </div>
+      <div class="cards-grid cards-grid--top" id="top-value"></div>
+    </div>
+  </section>
+
+  <!-- ===================== JÓVENES &lt;20 ===================== -->
+  <section class="section section--tight" id="talentos">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Scouting · Sub-20</span>
+          <h2>Jóvenes talentos</h2>
+          <p>Menores de 20 años con mayor valor de mercado.</p>
+        </div>
+      </div>
+      <div class="scroller" id="young-talents"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div>
+        <a class="logo" href="index.html" aria-label="IFLXI inicio">
+          <img class="logo__img logo__img--for-light" src="brand/logo-dark-320.png" alt="IFLXI" width="140" height="56">
+          <img class="logo__img logo__img--for-dark" src="brand/logo-white-320.png" alt="IFLXI" width="140" height="56">
+        </a>
+        <p class="footer__about">La infraestructura de datos del fútbol mundial. Estadísticas, valores de mercado e inteligencia artificial en una sola plataforma.</p>
+        <p class="footer__social-label">Síguenos</p>
+        <nav class="social-links social-links--footer" aria-label="Redes sociales IFLXI">
+          <a href="https://www.instagram.com/iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Instagram @iflxi_official" title="Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+          <a href="https://x.com/IFLXI_Official" target="_blank" rel="noopener noreferrer" aria-label="X @IFLXI_Official" title="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.995-9.212L2.25 2.25h6.893l4.237 5.647L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="TikTok @iflxi_official" title="TikTok">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+          </a>
+          <a href="https://www.threads.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Threads @iflxi_official" title="Threads">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01L1.466 12c.028-3.576.879-6.43 2.525-8.482C5.845 1.205 8.597.024 12.18 0h.014c3.582.024 6.334 1.205 8.183 3.518 1.646 2.051 2.496 4.905 2.496 8.261v.013c-.024 3.581-1.205 6.334-3.518 8.183C18.34 22.795 15.586 23.976 12.186 24M8.14 12.001c0-2.237 1.326-3.727 3.435-3.727S15.01 9.764 15.01 12s-1.326 3.727-3.435 3.727S8.14 14.238 8.14 12m3.435-5.54c-3.19 0-5.25 2.07-5.25 5.54s2.06 5.54 5.25 5.54 5.25-2.07 5.25-5.54-2.06-5.54-5.25-5.54"/></svg>
+          </a>
+        </nav>
+      </div>
+
+      <div>
+        <h4>Producto</h4>
+        <ul>
+          <li><a href="index.html#mercado">Top mercado</a></li>
+          <li><a href="index.html#fichajes">Fichajes</a></li>
+          <li><a href="partidos.html">Partidos</a></li>
+          <li><a href="comparador.html">Comparador</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Explorar</h4>
+        <ul>
+          <li><a href="index.html#directo">En directo</a></li>
+          <li><a href="index.html#talentos">Jóvenes talentos</a></li>
+          <li><a href="comparador.html">Comparador</a></li>
+          <li><a href="cuenta.html">Cuenta</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="cuenta.html">Crear cuenta</a></li>
+          <li><a href="index.html#noticias">Noticias</a></li>
+          <li><a href="index.html#buscador">Buscador</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <span>© <span id="year">2026</span> IFLXI — Info Football Lab XI.</span>
+      <span>Hecho con HTML, CSS y JavaScript puro</span>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

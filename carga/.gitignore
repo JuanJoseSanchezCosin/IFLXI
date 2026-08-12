@@ -1,0 +1,8 @@
+.import_map.json
+.api_football_map.json
+__pycache__/
+*.pyc
+_crear_excel.py
+_fix_paises.py
+_auditoria_excel.py
+

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparador de jugadores | IFLXI</title>
+<meta name="description" content="Compara dos futbolistas cara a cara: estadísticas, valor de mercado, edad, rendimiento y puntuación IA.">
+<meta name="theme-color" content="#f3f5f9">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="brand/favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="brand/site.webmanifest">
+<meta property="og:image" content="brand/og-image.png">
+<script>
+(() => { try { if (localStorage.getItem("iflxi-theme") === "dark") document.documentElement.setAttribute("data-theme", "dark"); } catch (_) {} })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body data-page="compare">
+
+<div class="aurora"></div>
+<div class="grid-bg"></div>
+
+<header class="header">
+  <div class="container">
+        <a class="logo" href="index.html" aria-label="IFLXI inicio">
+      <img class="logo__img logo__img--for-light" src="brand/logo-dark-320.png" alt="IFLXI" width="140" height="56">
+      <img class="logo__img logo__img--for-dark" src="brand/logo-white-320.png" alt="IFLXI" width="140" height="56">
+    </a>
+
+    <nav class="nav">
+      <a href="index.html" data-nav="home">Inicio</a>
+      <a href="index.html#fichajes">Fichajes</a>
+      <a href="index.html#directo">Directo</a>
+      <a href="index.html#mercado">Mercado</a>
+      <a href="partidos.html">Partidos</a>
+      <a href="comparador.html" data-nav="compare" aria-current="page">Comparador</a>
+    </nav>
+
+    <div class="header__actions">
+      <nav class="social-links social-links--header" aria-label="Redes sociales IFLXI">
+        <a href="https://www.instagram.com/iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Instagram @iflxi_official" title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+        <a href="https://x.com/IFLXI_Official" target="_blank" rel="noopener noreferrer" aria-label="X @IFLXI_Official" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.995-9.212L2.25 2.25h6.893l4.237 5.647L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg></a>
+        <a href="https://www.tiktok.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="TikTok @iflxi_official" title="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+        <a href="https://www.threads.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Threads @iflxi_official" title="Threads"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01L1.466 12c.028-3.576.879-6.43 2.525-8.482C5.845 1.205 8.597.024 12.18 0h.014c3.582.024 6.334 1.205 8.183 3.518 1.646 2.051 2.496 4.905 2.496 8.261v.013c-.024 3.581-1.205 6.334-3.518 8.183C18.34 22.795 15.586 23.976 12.186 24M8.14 12.001c0-2.237 1.326-3.727 3.435-3.727S15.01 9.764 15.01 12s-1.326 3.727-3.435 3.727S8.14 14.238 8.14 12m3.435-5.54c-3.19 0-5.25 2.07-5.25 5.54s2.06 5.54 5.25 5.54 5.25-2.07 5.25-5.54-2.06-5.54-5.25-5.54"/></svg></a>
+      </nav>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema claro/oscuro" title="Tema">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <a class="btn btn--primary btn--sm" href="index.html#buscador">Buscar jugador</a>
+      <button class="burger" aria-label="Abrir menú" aria-expanded="false"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="section section--tight">
+    <div class="container">
+
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Comparador IA</span>
+          <h2>Duelo de jugadores</h2>
+          <p>Elige dos futbolistas y el modelo enfrenta su rendimiento, valor de mercado y proyección atributo a atributo.</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn--sm" id="swap" type="button">Intercambiar</button>
+          <button class="btn btn--sm btn--primary" id="random" type="button">Duelo aleatorio</button>
+        </div>
+      </div>
+
+      <!-- Selección -->
+      <div class="compare-head" data-reveal>
+        <div class="pick pick--a">
+          <div id="pick-a"><div class="skeleton" style="min-height:180px"></div></div>
+          <div class="select-wrap">
+            <select id="select-a" aria-label="Jugador A"></select>
+          </div>
+        </div>
+
+        <div class="vs">VS</div>
+
+        <div class="pick pick--b">
+          <div id="pick-b"><div class="skeleton" style="min-height:180px"></div></div>
+          <div class="select-wrap">
+            <select id="select-b" aria-label="Jugador B"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparativa numérica -->
+      <div class="layout-2" style="margin-top:20px">
+        <div class="panel" data-reveal>
+          <div class="panel__head">
+            <h3>Comparativa directa</h3>
+            <span class="tag">Temporada 2025/26</span>
+          </div>
+          <div class="panel__body">
+            <div id="duels"></div>
+          </div>
+        </div>
+
+        <div class="panel" data-reveal>
+          <div class="panel__head">
+            <h3>Perfil de atributos</h3>
+            <div class="chart-legend">
+              <span><i style="background:#00e5a0"></i>A</span>
+              <span><i style="background:#b45cff"></i>B</span>
+            </div>
+          </div>
+          <div class="panel__body">
+            <div class="radar-wrap" id="radar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Veredicto IA -->
+      <div class="panel" style="margin-top:20px" data-reveal>
+        <div class="panel__head">
+          <h3>Análisis del modelo</h3>
+          <span class="tag">Generado automáticamente</span>
+        </div>
+        <div class="panel__body">
+          <div class="verdict" id="verdict"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div>
+                <a class="logo" href="index.html" aria-label="IFLXI inicio">
+          <img class="logo__img logo__img--for-light" src="brand/logo-dark-320.png" alt="IFLXI" width="140" height="56">
+          <img class="logo__img logo__img--for-dark" src="brand/logo-white-320.png" alt="IFLXI" width="140" height="56">
+        </a>
+        <p class="footer__about">La infraestructura de datos del fútbol mundial. Estadísticas, valores de mercado e inteligencia artificial en una sola plataforma.</p>
+        <p class="footer__social-label">Síguenos</p>
+        <nav class="social-links social-links--footer" aria-label="Redes sociales IFLXI">
+          <a href="https://www.instagram.com/iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Instagram @iflxi_official" title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+          <a href="https://x.com/IFLXI_Official" target="_blank" rel="noopener noreferrer" aria-label="X @IFLXI_Official" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.995-9.212L2.25 2.25h6.893l4.237 5.647L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg></a>
+          <a href="https://www.tiktok.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="TikTok @iflxi_official" title="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+          <a href="https://www.threads.com/@iflxi_official" target="_blank" rel="noopener noreferrer" aria-label="Threads @iflxi_official" title="Threads"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01L1.466 12c.028-3.576.879-6.43 2.525-8.482C5.845 1.205 8.597.024 12.18 0h.014c3.582.024 6.334 1.205 8.183 3.518 1.646 2.051 2.496 4.905 2.496 8.261v.013c-.024 3.581-1.205 6.334-3.518 8.183C18.34 22.795 15.586 23.976 12.186 24M8.14 12.001c0-2.237 1.326-3.727 3.435-3.727S15.01 9.764 15.01 12s-1.326 3.727-3.435 3.727S8.14 14.238 8.14 12m3.435-5.54c-3.19 0-5.25 2.07-5.25 5.54s2.06 5.54 5.25 5.54 5.25-2.07 5.25-5.54-2.06-5.54-5.25-5.54"/></svg></a>
+        </nav>
+      </div>
+      <div>
+        <h4>Producto</h4>
+        <ul>
+          <li><a href="index.html#destacados">Jugadores</a></li>
+          <li><a href="comparador.html">Comparador</a></li>
+          <li><a href="index.html#fichajes">Mercado</a></li>
+          <li><a href="index.html#plataforma">API</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Competiciones</h4>
+        <ul>
+          <li><a href="index.html#destacados">LaLiga</a></li>
+          <li><a href="index.html#destacados">Premier League</a></li>
+          <li><a href="index.html#destacados">Serie A</a></li>
+          <li><a href="index.html#destacados">Bundesliga</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="index.html#plataforma">Sobre nosotros</a></li>
+          <li><a href="index.html#plataforma">Prensa</a></li>
+          <li><a href="index.html#plataforma">Contacto</a></li>
+          <li><a href="index.html#plataforma">Privacidad</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <span>© <span id="year">2026</span> IFLXI — Info Football Lab XI.</span>
+      <span>Hecho con HTML, CSS y JavaScript puro</span>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

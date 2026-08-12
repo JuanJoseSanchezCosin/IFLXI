@@ -1,0 +1,14 @@
+# No publicar datos de carga / SQL / mapas en el CDN público
+carga/
+sql/
+docs/
+.git/
+*.bak
+*.bak_*
+.env
+.env.*
+**/__pycache__/
+**/*.pyc
+site-info.json
+site-query*.json
+_tmp_*

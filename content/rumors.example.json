@@ -1,0 +1,32 @@
+{
+  "_comment": "Editorial Fichajes.com-style. NO es entidad MVP. El front puede leer este JSON cuando el sobrino lo rellene. pct null = desconocido.",
+  "updatedAt": "2026-08-11",
+  "items": [
+    {
+      "id": "rumor-demo-1",
+      "playerName": "Ejemplo Jugador",
+      "playerId": null,
+      "fromClub": "Club Origen",
+      "interestedClub": "Club Interesado",
+      "pct": 65,
+      "trend": "up",
+      "status": "rumor",
+      "source": "redaccion",
+      "headline": "Interés creciente del Club Interesado",
+      "publishedAt": "2026-08-11T18:00:00Z"
+    },
+    {
+      "id": "rumor-demo-2",
+      "playerName": "Otro Ejemplo",
+      "playerId": null,
+      "fromClub": "Club A",
+      "interestedClub": "Club B",
+      "pct": null,
+      "trend": "flat",
+      "status": "rumour",
+      "source": "redaccion",
+      "headline": "Contactos preliminares sin confirmar",
+      "publishedAt": "2026-08-11T12:00:00Z"
+    }
+  ]
+}

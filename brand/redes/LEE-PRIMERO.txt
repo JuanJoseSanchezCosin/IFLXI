@@ -1,0 +1,29 @@
+IFLXI — Pack de logos para redes sociales
+========================================
+
+RECOMENDADO (todas las redes):
+  avatar-negro-1080.png     → foto de perfil Instagram / TikTok / Threads / X
+  avatar-claro-1080.png     → si la red o el fondo es claro
+
+POR RED:
+  instagram-perfil-1080.png
+  tiktok-perfil-1080.png
+  threads-perfil-1080.png
+  x-twitter-perfil-400.png
+  x-twitter-portada-1500x500.png
+
+TRANSPARENTES (para Canva / edición):
+  01-logo-blanco-transparente.png
+  02-logo-oscuro-transparente.png
+  03-logo-blanco-transparente-1600.png
+  04-logo-oscuro-transparente-1600.png
+
+PORTADAS:
+  x-twitter-portada-1500x500.png
+  linkedin-portada-1584x396.png
+  facebook-portada-820x312.png
+  youtube-banner-2560x1440.png
+  instagram-story-1080x1920.png
+  instagram-post-1080.png
+
+Marca @iflxi_official / @IFLXI_Official

@@ -1,0 +1,381 @@
+<mxfile host="app.diagrams.net" agent="IFLXI-Architect" version="22.1.0">
+  <diagram id="iflxi-er-mvp-v12" name="IFLXI ER MVP v1.2">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2600" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===================== TITLE ===================== -->
+        <mxCell id="title" value="IFLXI — Modelo Entidad-Relación MVP v1.2&#xa;Modelo aprobado MVP v1.1 + limpieza visual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="680" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Info Football Lab XI · Notación Crow&#39;s Foot · Diccionario MVP v1.1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#64748b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="68" width="520" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== LEGEND ===================== -->
+        <mxCell id="legend" value="LEYENDA&#xa;&#xa;PK = Primary Key&#xa;FK = Foreign Key&#xa;CACHE = Campo derivado (no fuente de verdad)&#xa;UK = Unique&#xa;&#xa;——— 1 ──────────&lt; N   = Uno a muchos&#xa;——— 1 ────────── 0..1 = Uno a cero/uno&#xa;——— 1 ────────── 1   = Uno a uno&#xa;&#xa;Colores por dominio:&#xa;■ Geo   ■ Personas   ■ Competición&#xa;■ Partidos   ■ Mercado   ■ Producto&#xa;&#xa;— — — línea punteada = opcional / cache / SEO" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;fillColor=#f8fafc;strokeColor=#64748b;fontSize=11;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="2260" y="20" width="300" height="250" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== SLUG (top transversal) ===================== -->
+        <mxCell id="lbl_slug" value="PRODUCTO / SEO (transversal)" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#7c3aed;" vertex="1" parent="1">
+          <mxGeometry x="900" y="20" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="slug" value="SLUG&#xa;─────────────&#xa;PK  slug_id&#xa;    entity_type&#xa;    entity_id&#xa;    locale&#xa;UK  slug&#xa;    is_primary&#xa;&#xa;«producto / SEO»&#xa;polimórfico → player|team|&#xa;competition|match|transfer|season" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#f3e8ff;strokeColor=#7c3aed;fontColor=#4c1d95;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="900" y="48" width="240" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="note_slug" value="Entidad SEO transversal.&#xa;No contiene FK físicas por polimorfismo MVP.&#xa;No borrar entidades con slug público." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#faf5ff;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=10;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="48" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="note_slug_targets" value="Publicables: PLAYER · TEAM · COMPETITION&#xa;+ otras (match|transfer|season)" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontColor=#7c3aed;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="132" width="280" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== DOMAIN LABELS ===================== -->
+        <mxCell id="lbl_geo" value="DOMINIO GEOGRAFÍA" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#059669;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="180" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_people" value="DOMINIO PERSONAS / JUGADORES" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#2563eb;" vertex="1" parent="1">
+          <mxGeometry x="300" y="250" width="260" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_comp" value="DOMINIO COMPETICIÓN / EQUIPOS" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#d97706;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="250" width="260" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_match" value="DOMINIO PARTIDOS" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#e11d48;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1120" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_mkt" value="DOMINIO MERCADO" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontStyle=1;fontColor=#ea580c;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="1120" width="160" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== GEO LEFT ===================== -->
+        <mxCell id="country" value="COUNTRY&#xa;─────────────&#xa;PK  country_id&#xa;UK  iso2&#xa;    name&#xa;    iso3&#xa;    continent_code&#xa;    is_active" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ecfdf5;strokeColor=#059669;fontColor=#064e3b;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="city" value="CITY&#xa;─────────────&#xa;PK  city_id&#xa;FK  country_id&#xa;    name&#xa;    latitude&#xa;    longitude&#xa;    is_active" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ecfdf5;strokeColor=#059669;fontColor=#064e3b;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="200" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== PERSONAS LEFT-CENTER ===================== -->
+        <mxCell id="person" value="PERSON&#xa;─────────────&#xa;PK  person_id&#xa;    first_name&#xa;    last_name&#xa;    display_name&#xa;    birth_date&#xa;FK  nationality_id&#xa;FK  birth_country_id&#xa;FK  birth_city_id" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="280" width="220" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="player" value="PLAYER  ★ CENTRO&#xa;─────────────&#xa;PK  player_id&#xa;FK  person_id  UK&#xa;FK  current_team_id  CACHE nullable&#xa;    current_market_value  CACHE nullable&#xa;    current_market_value_currency CACHE&#xa;    primary_position&#xa;    secondary_position&#xa;    foot&#xa;    height_cm&#xa;    status&#xa;&#xa;«caches = derivados, no verdad»" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=1;strokeWidth=2;fillColor=#bfdbfe;strokeColor=#1d4ed8;fontColor=#1e3a8a;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="560" y="520" width="280" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="note_player" value="PLAYER.current_team_id y current_market_value son CACHE.&#xa;La fuente de verdad son HISTORY y MARKET_VALUE_HISTORY." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#eff6ff;strokeColor=#2563eb;fontColor=#1e3a8a;fontSize=10;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="860" y="520" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="history" value="PLAYER_TEAM_HISTORY&#xa;─────────────&#xa;PK  history_id&#xa;FK  player_id&#xa;FK  team_id&#xa;    start_date&#xa;    end_date  nullable&#xa;    role&#xa;FK  on_loan_from_team_id nullable&#xa;    shirt_number&#xa;&#xa;end_date NULL = vigente&#xa;loan + on_loan_from = cesión" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="300" y="820" width="240" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== COMPETICION RIGHT ===================== -->
+        <mxCell id="competition" value="COMPETITION&#xa;─────────────&#xa;PK  competition_id&#xa;    name&#xa;FK  country_id nullable&#xa;    sport_code&#xa;    competition_type&#xa;    gender&#xa;    age_category&#xa;    scope" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#fef3c7;strokeColor=#d97706;fontColor=#78350f;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="280" width="220" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="season" value="SEASON&#xa;─────────────&#xa;PK  season_id&#xa;FK  competition_id&#xa;    name_default&#xa;    year_start&#xa;    year_end&#xa;    is_current&#xa;&#xa;⚠ máx. 1 is_current&#xa;   por competition" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#fef3c7;strokeColor=#d97706;fontColor=#78350f;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="280" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="team" value="TEAM&#xa;─────────────&#xa;PK  team_id&#xa;FK  country_id&#xa;FK  city_id nullable&#xa;FK  parent_team_id nullable&#xa;    name&#xa;    short_name&#xa;    team_kind (club|national)&#xa;    gender&#xa;    age_category&#xa;    is_active&#xa;&#xa;slug → vía entidad SLUG" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#fef3c7;strokeColor=#d97706;fontColor=#78350f;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="560" width="240" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="teamcomp" value="TEAM_COMPETITION&#xa;─────────────&#xa;PK  team_competition_id&#xa;FK  team_id&#xa;FK  season_id&#xa;    status&#xa;&#xa;UK (team_id, season_id)&#xa;N:M TEAM ↔ SEASON" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#fde68a;strokeColor=#b45309;fontColor=#78350f;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="560" width="220" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="note_teamcomp" value="Define participación del equipo en una temporada concreta.&#xa;No existe relación directa TEAM–SEASON." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;fontSize=10;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="730" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== PARTIDOS BOTTOM ===================== -->
+        <mxCell id="match" value="MATCH&#xa;─────────────&#xa;PK  match_id&#xa;FK  season_id&#xa;FK  home_team_id&#xa;FK  away_team_id&#xa;    kickoff_at&#xa;    match_date&#xa;    home_score  (acta oficial)&#xa;    away_score  (acta oficial)&#xa;    status&#xa;FK  venue_city_id nullable&#xa;&#xa;scores ≠ suma automática eventos" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ffe4e6;strokeColor=#e11d48;fontColor=#881337;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1160" width="260" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="note_match" value="home_score/away_score = resultado oficial.&#xa;No se recalcula desde eventos." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff1f2;strokeColor=#e11d48;fontColor=#881337;fontSize=10;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1390" width="260" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="event" value="MATCH_EVENT&#xa;─────────────&#xa;PK  event_id&#xa;FK  match_id&#xa;FK  player_id nullable&#xa;FK  secondary_player_id nullable&#xa;FK  team_id&#xa;    event_type&#xa;    minute&#xa;    extra_minute&#xa;    period&#xa;&#xa;NO event_type=assist&#xa;gol+asist = secondary_player_id&#xa;sub_out: sale / entra" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ffe4e6;strokeColor=#e11d48;fontColor=#881337;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="1160" width="260" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="note_event" value="Asistencias mediante secondary_player_id.&#xa;No existe event_type assist." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff1f2;strokeColor=#e11d48;fontColor=#881337;fontSize=10;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="1410" width="260" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== MERCADO BOTTOM RIGHT ===================== -->
+        <mxCell id="transfer" value="TRANSFER&#xa;─────────────&#xa;PK  transfer_id&#xa;FK  player_id&#xa;FK  from_team_id nullable&#xa;FK  to_team_id nullable&#xa;FK  related_history_id nullable&#xa;    transfer_type&#xa;    effective_date&#xa;    fee_amount nullable&#xa;    fee_currency&#xa;    fee_is_estimated&#xa;&#xa;related_history_id = spell DESTINO&#xa;sync obligatorio con HISTORY" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ffedd5;strokeColor=#ea580c;fontColor=#7c2d12;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="1160" width="260" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="market" value="MARKET_VALUE_HISTORY&#xa;─────────────&#xa;PK  market_value_id&#xa;FK  player_id&#xa;    recorded_on&#xa;    value&#xa;    currency&#xa;    source&#xa;&#xa;UK (player_id, recorded_on, source)&#xa;fuente del CACHE de valor" style="verticalAlign=top;align=left;overflow=fill;fontSize=11;fontFamily=Helvetica;html=1;rounded=1;shadow=0;strokeWidth=1;fillColor=#ffedd5;strokeColor=#ea580c;fontColor=#7c2d12;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1160" width="250" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== BUSINESS NOTES ===================== -->
+        <mxCell id="notes" value="REGLAS DE NEGOCIO CLAVE (Anexo A) — sin cambios vs v1.1&#xa;&#xa;• current_team_id / current_market_value = CACHE&#xa;• Sin club = sin history de club abierta + cache null&#xa;• Cesión = role=loan + on_loan_from_team_id&#xa;• Club+selección abiertos OK · 2 clubs abiertos NO&#xa;• Asistencia solo secondary_player_id (no event assist)&#xa;• substitution_out: sale=player_id · entra=secondary&#xa;• Máx. 1 SEASON.is_current por COMPETITION&#xa;• TRANSFER sincroniza HISTORY (related_history_id=destino)&#xa;• UNIQUE market_value (player, recorded_on, source)&#xa;• UNIQUE slug (locale, slug) · 1 primary por entidad+locale" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;fillColor=#fff7ed;strokeColor=#ea580c;fontSize=11;fontColor=#9a3412;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1520" width="520" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="card_summary" value="CARDINALIDADES CLAVE&#xa;&#xa;PERSON 1 ──── 0..1 PLAYER&#xa;PLAYER 1 ──── N PLAYER_TEAM_HISTORY&#xa;TEAM 1 ──── N PLAYER_TEAM_HISTORY&#xa;MATCH 1 ──── N MATCH_EVENT&#xa;PLAYER 1 ──── N MARKET_VALUE_HISTORY&#xa;PLAYER 1 ──── N TRANSFER&#xa;TRANSFER 1 ──── 1 RELATED_HISTORY (destino)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;fillColor=#f0f9ff;strokeColor=#0284c7;fontSize=11;fontColor=#0c4a6e;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1520" width="320" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== RELATIONSHIPS ===================== -->
+
+        <!-- COUNTRY 1:N CITY -->
+        <mxCell id="r1" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#059669;fontSize=10;" edge="1" parent="1" source="country" target="city">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CITY 1:N TEAM (route below people, above partidos) -->
+        <mxCell id="r2" value="1 : N&#xa;sede" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#059669;fontSize=10;" edge="1" parent="1" source="city" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="575" />
+              <mxPoint x="260" y="1040" />
+              <mxPoint x="1220" y="1040" />
+              <mxPoint x="1220" y="634" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- COUNTRY 1:N TEAM (top corridor) -->
+        <mxCell id="r2b" value="1 : N&#xa;país" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#059669;fontSize=10;dashed=1;" edge="1" parent="1" source="country" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="318" />
+              <mxPoint x="260" y="240" />
+              <mxPoint x="1220" y="240" />
+              <mxPoint x="1220" y="592" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- COUNTRY → COMPETITION (top corridor) -->
+        <mxCell id="r3" value="0..1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#d97706;fontSize=10;dashed=1;" edge="1" parent="1" source="country" target="competition">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="270" y="295" />
+              <mxPoint x="270" y="220" />
+              <mxPoint x="1260" y="220" />
+              <mxPoint x="1260" y="314" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- COMPETITION 1:N SEASON -->
+        <mxCell id="r4" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#d97706;fontSize=10;" edge="1" parent="1" source="competition" target="season">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- SEASON 1:N TEAM_COMPETITION -->
+        <mxCell id="r5" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#d97706;fontSize=10;" edge="1" parent="1" source="season" target="teamcomp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- TEAM 1:N TEAM_COMPETITION -->
+        <mxCell id="r6" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.45;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#d97706;fontSize=10;" edge="1" parent="1" source="team" target="teamcomp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- PERSON 1 : 0..1 PLAYER -->
+        <mxCell id="r7" value="1 : 0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#2563eb;fontSize=11;fontStyle=1;" edge="1" parent="1" source="person" target="player">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="630" y="399" />
+              <mxPoint x="630" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- PERSON nationality → COUNTRY -->
+        <mxCell id="r7b" value="N : 1&#xa;nationality" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.55;exitDx=0;exitDy=0;entryX=1;entryY=0.55;entryDx=0;entryDy=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#2563eb;fontSize=10;dashed=1;" edge="1" parent="1" source="person" target="country">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- PLAYER 1:N HISTORY -->
+        <mxCell id="r8" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2563eb;fontSize=10;" edge="1" parent="1" source="player" target="history">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="616" y="800" />
+              <mxPoint x="560" y="800" />
+              <mxPoint x="560" y="880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM 1:N HISTORY -->
+        <mxCell id="r9" value="1 : N&#xa;historial" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.55;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2563eb;fontSize=10;" edge="1" parent="1" source="team" target="history">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="718" />
+              <mxPoint x="1220" y="930" />
+              <mxPoint x="560" y="930" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- PLAYER CACHE current_team → TEAM -->
+        <mxCell id="r10" value="CACHE&#xa;current_team" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.55;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#64748b;fontSize=10;dashed=1;" edge="1" parent="1" source="player" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1140" y="600" />
+              <mxPoint x="1140" y="676" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SEASON 1:N MATCH (right edge → bottom, avoids PLAYER) -->
+        <mxCell id="r11" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=1;entryY=0.2;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;" edge="1" parent="1" source="season" target="match">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="433" />
+              <mxPoint x="1900" y="1100" />
+              <mxPoint x="580" y="1100" />
+              <mxPoint x="580" y="1202" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM home → MATCH (corridor y=1080, above MATCH, right of EVENT) -->
+        <mxCell id="r12" value="1 : N&#xa;home" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;" edge="1" parent="1" source="team" target="match">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1364" y="1080" />
+              <mxPoint x="482" y="1080" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM away → MATCH -->
+        <mxCell id="r12b" value="1 : N&#xa;away" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.55;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;dashed=1;" edge="1" parent="1" source="team" target="match">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1412" y="1060" />
+              <mxPoint x="521" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- MATCH 1:N EVENT -->
+        <mxCell id="r13" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.45;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;fontStyle=1;" edge="1" parent="1" source="match" target="event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- PLAYER 1:N EVENT (down left of EVENT, no cross through MATCH body) -->
+        <mxCell id="r14" value="1 : N&#xa;player / secondary" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.55;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;" edge="1" parent="1" source="player" target="event">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="714" y="800" />
+              <mxPoint x="714" y="1120" />
+              <mxPoint x="750" y="1120" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM 1:N EVENT -->
+        <mxCell id="r15" value="1 : N&#xa;event.team" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#e11d48;fontSize=10;dashed=1;" edge="1" parent="1" source="team" target="event">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1328" y="1020" />
+              <mxPoint x="920" y="1020" />
+              <mxPoint x="920" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- PLAYER 1:N TRANSFER (right corridor, avoids MATCH) -->
+        <mxCell id="r16" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#ea580c;fontSize=10;" edge="1" parent="1" source="player" target="transfer">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1140" y="692" />
+              <mxPoint x="1140" y="980" />
+              <mxPoint x="1240" y="980" />
+              <mxPoint x="1240" y="1218" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM from/to TRANSFER -->
+        <mxCell id="r17" value="1 : N&#xa;from / to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#ea580c;fontSize=10;" edge="1" parent="1" source="team" target="transfer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- TRANSFER 1:1 RELATED_HISTORY destino (bottom highway under partidos) -->
+        <mxCell id="r18" value="1 : 1&#xa;related_history&#xa;(destino)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.85;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERone;endFill=0;strokeColor=#ea580c;fontSize=10;dashed=1;" edge="1" parent="1" source="transfer" target="history">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="1356" />
+              <mxPoint x="1240" y="1480" />
+              <mxPoint x="420" y="1480" />
+              <mxPoint x="420" y="1020" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- PLAYER 1:N MARKET (right corridor) -->
+        <mxCell id="r19" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.55;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#ea580c;fontSize=10;" edge="1" parent="1" source="player" target="market">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="646" />
+              <mxPoint x="1180" y="900" />
+              <mxPoint x="1880" y="900" />
+              <mxPoint x="1880" y="1214" />
+              <mxPoint x="1850" y="1214" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SLUG dashed links (short, top area only) -->
+        <mxCell id="r20" value="SEO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#7c3aed;fontSize=10;dashed=1;" edge="1" parent="1" source="slug" target="player">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="280" />
+              <mxPoint x="700" y="280" />
+              <mxPoint x="700" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r21" value="SEO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.35;entryY=0;entryDx=0;entryDy=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#7c3aed;fontSize=10;dashed=1;" edge="1" parent="1" source="slug" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080" y="260" />
+              <mxPoint x="1364" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r22" value="SEO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.55;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#7c3aed;fontSize=10;dashed=1;" edge="1" parent="1" source="slug" target="competition">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="147" />
+              <mxPoint x="1390" y="147" />
+              <mxPoint x="1390" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TEAM self parent -->
+        <mxCell id="r23" value="parent&#xa;0..1 : N&#xa;filial" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#d97706;fontSize=10;dashed=1;curved=1;" edge="1" parent="1" source="team" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1540" y="600" />
+              <mxPoint x="1560" y="600" />
+              <mxPoint x="1560" y="740" />
+              <mxPoint x="1500" y="740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- HISTORY on_loan_from → TEAM -->
+        <mxCell id="r24" value="on_loan_from&#xa;0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#2563eb;fontSize=10;dashed=1;" edge="1" parent="1" source="history" target="team">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="580" y="970" />
+              <mxPoint x="1220" y="970" />
+              <mxPoint x="1220" y="738" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
