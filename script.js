@@ -1210,11 +1210,18 @@ function realTransferRowHTML(t) {
   }
   const routeTitle = `${from} → ${to}`;
   const fallback = initials(t.player);
+  const avatarInner = t.playerPhoto
+    ? `<img src="${t.playerPhoto}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const p=this.parentElement;p.classList.remove('avatar--photo');p.textContent=p.dataset.fallback||'';">`
+    : fallback;
+  const realClubBadge = (name, logo) =>
+    logo
+      ? `<span class="badge-club badge-club--img" title="${name}"><img src="${logo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.closest('.badge-club').classList.remove('badge-club--img');this.closest('.badge-club').textContent='${initials(name)}';"></span>`
+      : clubBadgeHTML(name);
   return `
     <tr data-href="jugador.html?id=${t.playerId}" title="${routeTitle}">
       <td>
         <div class="cell-player">
-          <div class="avatar avatar--sm" style="--c1:#1a1a1a;--c2:#3a3a3a">${fallback}</div>
+          <div class="avatar avatar--sm${t.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a" data-fallback="${fallback}">${avatarInner}</div>
           <div>
             <b class="tm-link">${t.player}</b>
           </div>
@@ -1222,9 +1229,9 @@ function realTransferRowHTML(t) {
       </td>
       <td class="td-route">
         <div class="transfer-route transfer-route--badges" title="${routeTitle}">
-          <span class="club-only" title="${from}">${clubBadgeHTML(from)}</span>
+          <span class="club-only" title="${from}">${realClubBadge(from, t.fromLogo)}</span>
           <span class="transfer-route__arrow" aria-hidden="true">${ICON_ARROW}</span>
-          <span class="club-only" title="${to}">${clubBadgeHTML(to)}</span>
+          <span class="club-only" title="${to}">${realClubBadge(to, t.toLogo)}</span>
         </div>
       </td>
       <td class="${costClass}">${cost}</td>

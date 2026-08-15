@@ -202,6 +202,21 @@ def compute_club_lab(squad: list[dict]) -> dict:
     }
 
 
+def team_logo_url(api_football_id: int | None) -> str | None:
+    """Escudo real vía CDN de API-Football, a partir del ID que guardamos
+    en team.api_football_id (sin llamar a la API, es una URL pública fija)."""
+    if not api_football_id:
+        return None
+    return f"https://media.api-sports.io/football/teams/{api_football_id}.png"
+
+
+def player_photo_url(api_football_id: int | None) -> str | None:
+    """Foto real vía CDN de API-Football, a partir de player.api_football_id."""
+    if not api_football_id:
+        return None
+    return f"https://media.api-sports.io/football/players/{api_football_id}.png"
+
+
 def club_payload(row: dict | None) -> dict:
     if not row:
         return {
@@ -210,6 +225,7 @@ def club_payload(row: dict | None) -> dict:
             "short": "—",
             "league": "—",
             "country": "—",
+            "logo": None,
             **colors_from_text("x"),
         }
     name = row.get("team_name") or row.get("name_default") or "Club"
@@ -221,6 +237,7 @@ def club_payload(row: dict | None) -> dict:
         "short": code,
         "league": row.get("competition_name") or "—",
         "country": row.get("country_name") or "—",
+        "logo": team_logo_url(row.get("team_api_football_id") or row.get("api_football_id")),
         **cols,
     }
 
@@ -262,6 +279,7 @@ def player_payload(row: dict) -> dict:
     return {
         "id": pid,
         "name": name,
+        "photo": player_photo_url(row.get("player_api_football_id")),
         "shirt": row.get("shirt_number") if row.get("shirt_number") is not None else "—",
         "age": age,  # null si desconocida
         "birth": birth_str,
@@ -351,6 +369,7 @@ def stats():
 PLAYER_SELECT = """
 SELECT
   p.id AS player_id,
+  p.api_football_id AS player_api_football_id,
   per.full_name,
   per.display_name,
   per.birth_date,
@@ -363,6 +382,7 @@ SELECT
   t.id AS team_id,
   t.name_default AS team_name,
   t.code AS team_code,
+  t.api_football_id AS team_api_football_id,
   ctry.name_default AS country_name,
   (
     SELECT c.name_default
@@ -1098,9 +1118,12 @@ def transfers(limit: int = Query(20, ge=1, le=100)):
                   t.fee_currency::text AS fee_currency,
                   t.fee_is_estimated,
                   p.id AS player_id,
+                  p.api_football_id AS player_api_football_id,
                   per.display_name AS player_name,
                   tf.name_default AS from_team,
-                  tt.name_default AS to_team
+                  tf.api_football_id AS from_team_api_football_id,
+                  tt.name_default AS to_team,
+                  tt.api_football_id AS to_team_api_football_id
                 FROM transfer t
                 JOIN player p ON p.id = t.player_id
                 JOIN person per ON per.id = p.person_id
@@ -1117,8 +1140,11 @@ def transfers(limit: int = Query(20, ge=1, le=100)):
             "id": str(r["id"]),
             "playerId": str(r["player_id"]),
             "player": r["player_name"],
+            "playerPhoto": player_photo_url(r["player_api_football_id"]),
             "from": r["from_team"],
+            "fromLogo": team_logo_url(r["from_team_api_football_id"]),
             "to": r["to_team"],
+            "toLogo": team_logo_url(r["to_team_api_football_id"]),
             "type": r["transfer_type"],
             "date": r["effective_date"].isoformat() if r["effective_date"] else None,
             "announced": r["announced_date"].isoformat() if r["announced_date"] else None,
