@@ -21,3 +21,6 @@ carga/*-tmp.json
 carga/site-*.json
 _review_sobrino/
 _tmp_del.json
+
+carga/iflxi_datos*.sql
+carga/nombres_raros.txt

@@ -412,6 +412,18 @@ def process_events(args) -> None:
                     stats["warnings"] += 1
                     secondary_uuid = None
                     secondary_api = ""
+                if (
+                    secondary_uuid
+                    and player_uuid
+                    and secondary_uuid == player_uuid
+                ):
+                    print(
+                        f"  WARN #{ord_i} {etype} {minute_i}': "
+                        f"asistente = goleador (dato API inconsistente) → secondary=NULL"
+                    )
+                    stats["warnings"] += 1
+                    secondary_uuid = None
+                    secondary_api = ""
 
             if skip:
                 continue
@@ -492,40 +504,52 @@ def process_events(args) -> None:
     with connect() as conn:
         with conn.transaction():
             with conn.cursor() as cur:
+                skipped_db = 0
                 for row in planned_rows:
                     # Defensa: este script NUNCA hace UPDATE/INSERT sobre match
                     # (home_score/away_score = acta oficial; no recalcular).
-                    cur.execute(
-                        """
-                        INSERT INTO match_event (
-                          id, match_id, event_type, player_id, secondary_player_id,
-                          team_id, minute, extra_minute, period, sort_order
-                        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT (id) DO UPDATE SET
-                          event_type = EXCLUDED.event_type,
-                          player_id = EXCLUDED.player_id,
-                          secondary_player_id = EXCLUDED.secondary_player_id,
-                          team_id = EXCLUDED.team_id,
-                          minute = EXCLUDED.minute,
-                          extra_minute = EXCLUDED.extra_minute,
-                          period = EXCLUDED.period,
-                          sort_order = EXCLUDED.sort_order,
-                          updated_at = now()
-                        """,
-                        (
-                            row["id"],
-                            row["match_id"],
-                            row["event_type"],
-                            row["player_id"],
-                            row["secondary_player_id"],
-                            row["team_id"],
-                            row["minute"],
-                            row["extra_minute"],
-                            row["period"],
-                            row["sort_order"],
-                        ),
-                    )
+                    # Cada fila va en su propio savepoint: si una fila falla por
+                    # un dato inesperado, se descarta solo ella y sigue el resto
+                    # (antes: un solo fallo tiraba toda la carga sin insertar nada).
+                    try:
+                        with conn.transaction():
+                            cur.execute(
+                                """
+                                INSERT INTO match_event (
+                                  id, match_id, event_type, player_id, secondary_player_id,
+                                  team_id, minute, extra_minute, period, sort_order
+                                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                ON CONFLICT (id) DO UPDATE SET
+                                  event_type = EXCLUDED.event_type,
+                                  player_id = EXCLUDED.player_id,
+                                  secondary_player_id = EXCLUDED.secondary_player_id,
+                                  team_id = EXCLUDED.team_id,
+                                  minute = EXCLUDED.minute,
+                                  extra_minute = EXCLUDED.extra_minute,
+                                  period = EXCLUDED.period,
+                                  sort_order = EXCLUDED.sort_order,
+                                  updated_at = now()
+                                """,
+                                (
+                                    row["id"],
+                                    row["match_id"],
+                                    row["event_type"],
+                                    row["player_id"],
+                                    row["secondary_player_id"],
+                                    row["team_id"],
+                                    row["minute"],
+                                    row["extra_minute"],
+                                    row["period"],
+                                    row["sort_order"],
+                                ),
+                            )
+                    except Exception as exc:
+                        skipped_db += 1
+                        print(f"  WARN DB: fila {row['id']} rechazada ({exc}) → skip")
+                        continue
                     stats["events_upserted"] += 1
+                if skipped_db:
+                    print(f"Filas rechazadas por la base de datos: {skipped_db}")
 
     # Solo persistir .import_map.json (bucket event + UUIDs).
     # NO reescribir .api_football_map.json: este importador no lo muta y

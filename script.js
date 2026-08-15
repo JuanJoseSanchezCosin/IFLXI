@@ -1211,22 +1211,19 @@ function transferRowHTML(transfer) {
     </tr>`;
 }
 
+/** Convierte el % de un rumor en una etiqueta de fiabilidad Baja/Media/Alta. */
+function rumorLevelHTML(pct) {
+  if (pct == null) return `<span class="rumor-pct rumor-pct--unk">Sin datos</span>`;
+  if (pct >= 60) return `<span class="rumor-pct rumor-pct--up">Alta</span>`;
+  if (pct >= 35) return `<span class="rumor-pct rumor-pct--flat">Media</span>`;
+  return `<span class="rumor-pct rumor-pct--down">Baja</span>`;
+}
+
 function rumorRowHTML(rumor) {
   const player = PLAYERS.find((p) => p.id === rumor.playerId);
   const name = player?.name || rumor.player || "—";
   const club = rumor.club || (player ? clubOf(player).name : "—");
-  let pct;
-  if (rumor.pct == null) {
-    pct = `<span class="rumor-pct rumor-pct--unk">?</span>`;
-  } else {
-    const arrow =
-      rumor.trend === "up"
-        ? `<span class="rumor-arrow rumor-arrow--up" aria-hidden="true">▲</span>`
-        : rumor.trend === "down"
-          ? `<span class="rumor-arrow rumor-arrow--down" aria-hidden="true">▼</span>`
-          : "";
-    pct = `<span class="rumor-pct rumor-pct--${rumor.trend || "flat"}">${rumor.pct}% ${arrow}</span>`;
-  }
+  const pct = rumorLevelHTML(rumor.pct);
   return `
     <tr${player ? ` data-href="jugador.html?id=${player.id}"` : ""}>
       <td>
@@ -1242,6 +1239,51 @@ function rumorRowHTML(rumor) {
         <span class="club-only" title="${rumor.interested}">${clubBadgeHTML(rumor.interested)}</span>
       </td>
       <td>${pct}</td>
+    </tr>`;
+}
+
+function topValuedRowHTML(player) {
+  const club = clubOf(player);
+  return `
+    <tr data-href="jugador.html?id=${player.id}">
+      <td>
+        <div class="cell-player">
+          ${avatarHTML(player, "avatar--sm")}
+          <div>
+            <b class="tm-link">${player.name}</b>
+            <small>${player.position || player.pos}</small>
+          </div>
+        </div>
+      </td>
+      <td class="td-club">
+        <span class="club-only" title="${club.name}">${clubBadgeHTML(club.name)}</span> ${club.name}
+      </td>
+      <td class="fee">${formatValue(player.value)}</td>
+    </tr>`;
+}
+
+/** Fila de "fichajes top de verano": como transferRowHTML pero solo con el club de destino. */
+function topTransferRowHTML(transfer) {
+  const player = PLAYERS.find((p) => p.id === transfer.playerId);
+  if (!player) return "";
+  const cost = formatTransferCost(transfer);
+  const costClass =
+    cost === "Cesión" ? "fee fee--loan" : cost === "Libre" ? "fee fee--free" : "fee";
+  return `
+    <tr data-href="jugador.html?id=${player.id}">
+      <td>
+        <div class="cell-player">
+          ${avatarHTML(player, "avatar--sm")}
+          <div>
+            <b class="tm-link">${player.name}</b>
+            <small>${player.position || player.pos}</small>
+          </div>
+        </div>
+      </td>
+      <td class="td-club">
+        <span class="club-only" title="${transfer.to}">${clubBadgeHTML(transfer.to)}</span> ${transfer.to}
+      </td>
+      <td class="${costClass}">${cost}</td>
     </tr>`;
 }
 
@@ -2222,9 +2264,8 @@ function initAuth() {
 }
 
 async function initHome() {
-  const [topLive, youngLive, transfers, rumors, liveMatches] = await Promise.all([
+  const [topLive, transfers, rumors, liveMatches] = await Promise.all([
     api.getPlayers({ sort: "value", limit: 10 }).catch(() => []),
-    api.getPlayers({ maxAge: 19, sort: "value", limit: 10 }).catch(() => []),
     api.getTransfers(8).catch(() => TRANSFERS.slice(0, 8)),
     api.getRumors(6).catch(() => RUMORS.slice(0, 6)),
     api.getMatches({ status: "live", limit: 6 }).catch(() => MATCHES.filter((m) => m.status === "live")),
@@ -2235,39 +2276,48 @@ async function initHome() {
     .sort((a, b) => (b.value || 0) - (a.value || 0))
     .slice(0, 10);
 
-  const young = (youngLive?.length ? youngLive : PLAYERS.filter((p) => p.age != null && p.age < 20))
-    .slice()
-    .filter((p) => p.age == null || p.age < 20)
-    .sort((a, b) => (b.value || 0) - (a.value || 0))
-    .slice(0, 10);
-
   // Panel home: lista curada demo (la API real no encaja aún con este render)
   const transferList = TRANSFERS;
   const transfersBody = $("#transfers-body");
   if (transfersBody) {
-    const rows = transferList.slice(0, 8).map(transferRowHTML).filter(Boolean).join("");
+    const rows = transferList.slice(0, 5).map(transferRowHTML).filter(Boolean).join("");
     transfersBody.innerHTML = rows || `<tr><td colspan="3">Sin fichajes para mostrar.</td></tr>`;
   }
 
   const rumorsBody = $("#rumors-body");
   if (rumorsBody) {
     const list = RUMORS;
-    rumorsBody.innerHTML = list.slice(0, 8).map(rumorRowHTML).join("");
+    rumorsBody.innerHTML = list.slice(0, 5).map(rumorRowHTML).join("");
   }
 
   const liveHost = $("#live-matches");
   if (liveHost) {
     const list = liveMatches?.length ? liveMatches : MATCHES.filter((m) => m.status === "live");
-    liveHost.innerHTML = list.length
-      ? list.map(matchCardHTML).join("")
-      : `<p class="empty-note">No hay partidos en directo ahora. <a href="partidos.html">Ver todos los del día</a>.</p>`;
+    if (!list.length) {
+      liveHost.innerHTML = `<p class="empty-note">No hay partidos en directo ahora. <a href="partidos.html">Ver todos los del día</a>.</p>`;
+    } else {
+      const byLeague = new Map();
+      for (const m of list) {
+        const key = m.league || "Otros";
+        if (!byLeague.has(key)) byLeague.set(key, []);
+        byLeague.get(key).push(m);
+      }
+      liveHost.innerHTML = [...byLeague.entries()]
+        .map(([league, matches]) => matchLeagueBlockHTML(league, matches))
+        .join("");
+    }
   }
 
-  const topHost = $("#top-value");
-  if (topHost) topHost.innerHTML = top10.map(playerCardHTML).join("");
+  const topValueBody = $("#top-value-body");
+  if (topValueBody) topValueBody.innerHTML = top10.slice(0, 5).map(topValuedRowHTML).join("");
 
-  const talentsHost = $("#young-talents");
-  if (talentsHost) talentsHost.innerHTML = young.map(talentCardHTML).join("");
+  const topTransfersBody = $("#top-transfers-body");
+  if (topTransfersBody) {
+    const topSummer = TRANSFERS.slice()
+      .sort((a, b) => (b.fee || 0) - (a.fee || 0))
+      .slice(0, 5);
+    topTransfersBody.innerHTML = topSummer.map(topTransferRowHTML).filter(Boolean).join("");
+  }
 
   initNewsRail();
 

@@ -185,36 +185,59 @@
         </div>
         <a class="btn btn--sm btn--primary" href="partidos.html">Ver todos los partidos del día</a>
       </div>
-      <div class="live-grid" id="live-matches"></div>
+      <div id="live-matches"></div>
     </div>
   </section>
 
-  <!-- ===================== TOP 10 VALOR ===================== -->
+  <!-- ===================== FICHAJES TOP + MÁS VALIOSOS ===================== -->
   <section class="section" id="mercado">
     <div class="container">
       <div class="section-head">
         <div>
           <span class="eyebrow">Valores de mercado</span>
-          <h2>Top 10 más valiosos</h2>
-          <p>Los jugadores con mayor valoración en IFLXI.</p>
+          <h2>Lo mejor del mercado</h2>
+          <p>Los fichajes más caros del verano y los jugadores mejor valorados en IFLXI.</p>
         </div>
         <a class="btn btn--sm btn--primary" href="comparador.html">Abrir comparador</a>
       </div>
-      <div class="cards-grid cards-grid--top" id="top-value"></div>
-    </div>
-  </section>
-
-  <!-- ===================== JÓVENES &lt;20 ===================== -->
-  <section class="section section--tight" id="talentos">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <span class="eyebrow">Scouting · Sub-20</span>
-          <h2>Jóvenes talentos</h2>
-          <p>Menores de 20 años con mayor valor de mercado.</p>
+      <div style="display:grid;gap:20px;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));align-items:start">
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head">
+            <h3>Fichajes top de verano</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data data--tm">
+              <thead>
+                <tr>
+                  <th>Jugador/Posición</th>
+                  <th>Club</th>
+                  <th>Coste</th>
+                </tr>
+              </thead>
+              <tbody id="top-transfers-body"></tbody>
+            </table>
+          </div>
+          <div class="tm-panel__foot"><a href="#fichajes">Todos los fichajes del verano →</a></div>
+        </div>
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head">
+            <h3>Jugadores más valiosos</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data data--tm">
+              <thead>
+                <tr>
+                  <th>Jugador/Posición</th>
+                  <th>Club</th>
+                  <th>Valor de mercado</th>
+                </tr>
+              </thead>
+              <tbody id="top-value-body"></tbody>
+            </table>
+          </div>
+          <div class="tm-panel__foot"><a href="comparador.html">Ver mejores 100 →</a></div>
         </div>
       </div>
-      <div class="scroller" id="young-talents"></div>
     </div>
   </section>
 
@@ -261,7 +284,6 @@
         <h4>Explorar</h4>
         <ul>
           <li><a href="index.html#directo">En directo</a></li>
-          <li><a href="index.html#talentos">Jóvenes talentos</a></li>
           <li><a href="comparador.html">Comparador</a></li>
           <li><a href="cuenta.html">Cuenta</a></li>
         </ul>
