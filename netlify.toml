@@ -1,5 +1,11 @@
-[build]
+﻿[build]
   publish = "."
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://iflxi-backend.onrender.com/api/:splat"
+  status = 200
+  force = true
 
 [[headers]]
   for = "/*"
