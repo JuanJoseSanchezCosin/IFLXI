@@ -1,8 +1,10 @@
 .import_map.json
+.import_map.json.bak_*
 .api_football_map.json
+.api_football_map.json.bak_*
 __pycache__/
 *.pyc
+*.log
 _crear_excel.py
 _fix_paises.py
 _auditoria_excel.py
-
