@@ -1182,6 +1182,55 @@ function talentCardHTML(player) {
 
 const ICON_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13m-5-6 6 6-6 6"/></svg>';
 
+/** Fila de "Últimos fichajes" (home) para un fichaje REAL de la API (no demo).
+ * La API da: playerId, player (nombre), from, to, type (ENUM: permanent/loan/
+ * loan_end/free/end_of_contract/academy_promotion/unknown), fee (euros en
+ * crudo o null), currency. No hay foto de jugador en este endpoint, por eso
+ * no usa avatarHTML/PLAYERS (que son solo el elenco de ejemplo). */
+function realTransferRowHTML(t) {
+  if (!t || !t.player) return "";
+  const from = t.from || "Agente libre";
+  const to = t.to || "—";
+  let cost;
+  let costClass = "fee";
+  if (t.type === "loan" || t.type === "loan_end") {
+    cost = "Cesión";
+    costClass = "fee fee--loan";
+  } else if (t.type === "free" || t.type === "end_of_contract" || t.fee === 0) {
+    cost = "Libre";
+    costClass = "fee fee--free";
+  } else if (t.fee != null) {
+    const millions = t.fee / 1_000_000;
+    cost =
+      millions < 1
+        ? `${nf0.format(Math.round(t.fee / 1000))} mil €`
+        : `${new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(millions)} mill. €`;
+  } else {
+    cost = "—";
+  }
+  const routeTitle = `${from} → ${to}`;
+  const fallback = initials(t.player);
+  return `
+    <tr data-href="jugador.html?id=${t.playerId}" title="${routeTitle}">
+      <td>
+        <div class="cell-player">
+          <div class="avatar avatar--sm" style="--c1:#1a1a1a;--c2:#3a3a3a">${fallback}</div>
+          <div>
+            <b class="tm-link">${t.player}</b>
+          </div>
+        </div>
+      </td>
+      <td class="td-route">
+        <div class="transfer-route transfer-route--badges" title="${routeTitle}">
+          <span class="club-only" title="${from}">${clubBadgeHTML(from)}</span>
+          <span class="transfer-route__arrow" aria-hidden="true">${ICON_ARROW}</span>
+          <span class="club-only" title="${to}">${clubBadgeHTML(to)}</span>
+        </div>
+      </td>
+      <td class="${costClass}">${cost}</td>
+    </tr>`;
+}
+
 function transferRowHTML(transfer) {
   const player = PLAYERS.find((p) => p.id === transfer.playerId);
   if (!player) return "";
@@ -2276,18 +2325,22 @@ async function initHome() {
     .sort((a, b) => (b.value || 0) - (a.value || 0))
     .slice(0, 10);
 
-  // Panel home: lista curada demo (la API real no encaja aún con este render)
-  const transferList = TRANSFERS;
+  // Panel home: fichajes reales de la API (con reserva a demo si la API
+  // aún no responde, gestionada dentro de api.getTransfers).
+  const usingRealTransfers = Array.isArray(transfers) && transfers.length && transfers[0]?.player;
   const transfersBody = $("#transfers-body");
   if (transfersBody) {
-    const rows = transferList.slice(0, 5).map(transferRowHTML).filter(Boolean).join("");
+    const rows = usingRealTransfers
+      ? transfers.slice(0, 5).map(realTransferRowHTML).filter(Boolean).join("")
+      : TRANSFERS.slice(0, 5).map(transferRowHTML).filter(Boolean).join("");
     transfersBody.innerHTML = rows || `<tr><td colspan="3">Sin fichajes para mostrar.</td></tr>`;
   }
 
+  // Rumores: sin tabla real en el modelo de datos todavía → placeholder
+  // "próximamente" en vez de datos inventados.
   const rumorsBody = $("#rumors-body");
   if (rumorsBody) {
-    const list = RUMORS;
-    rumorsBody.innerHTML = list.slice(0, 5).map(rumorRowHTML).join("");
+    rumorsBody.innerHTML = `<tr><td colspan="3" class="empty-note">Próximamente: rumores de fichajes basados en datos reales.</td></tr>`;
   }
 
   const liveHost = $("#live-matches");
