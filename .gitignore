@@ -24,3 +24,5 @@ _tmp_del.json
 
 carga/iflxi_datos*.sql
 carga/nombres_raros.txt
+
+start.ps1

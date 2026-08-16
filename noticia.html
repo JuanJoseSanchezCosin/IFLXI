@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Partidos del día | IFLXI</title>
-<meta name="description" content="Todos los partidos de hoy: en directo, programados y finalizados.">
+<title>Noticia | IFLXI</title>
+<meta name="description" content="Noticias reales de IFLXI: fichajes, rumores y datos del fútbol mundial.">
 <meta name="theme-color" content="#f3f5f9">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32x32.png">
@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 
-<body data-page="matches">
+<body data-page="noticia">
 
 <div class="aurora"></div>
 <div class="grid-bg"></div>
@@ -71,7 +71,6 @@
         <a href="fichajes.html">Fichajes y rumores</a>
         <a href="mercado.html">Valores de mercado</a>
         <a href="competiciones.html" data-nav="competitions">Competiciones</a>
-        <a href="partidos.html" data-nav="matches" aria-current="page">Partidos</a>
         <a href="comparador.html" data-nav="compare">Comparador</a>
         <a href="cuenta.html" data-nav="cuenta">Cuenta</a>
       </nav>
@@ -80,26 +79,11 @@
 </header>
 
 <main>
-  <section class="section page-matches">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <span class="eyebrow">Resultados</span>
-          <h1>Partidos del día</h1>
-          <p id="matches-date">Hoy</p>
-        </div>
-        <div class="matches-summary">
-          <span class="match-card__live"><span class="dot"></span> <b id="live-count">0</b> en directo</span>
-          <a class="btn btn--sm" href="competiciones.html">Competiciones</a>
-        </div>
+  <section class="section">
+    <div class="container" style="max-width:760px">
+      <div id="noticia-root">
+        <p class="empty-note">Cargando…</p>
       </div>
-      <div id="matches-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 20px">
-        <button type="button" class="chip" data-status="">Todos</button>
-        <button type="button" class="chip" data-status="live">En vivo</button>
-        <button type="button" class="chip" data-status="finished">Terminado</button>
-        <button type="button" class="chip" data-status="scheduled">Próximamente</button>
-      </div>
-      <div class="match-day" id="day-matches"></div>
     </div>
   </section>
 </main>

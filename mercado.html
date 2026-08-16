@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Partidos del día | IFLXI</title>
-<meta name="description" content="Todos los partidos de hoy: en directo, programados y finalizados.">
+<title>Valores de mercado | IFLXI</title>
+<meta name="description" content="Ranking de jugadores por valor de mercado (próximamente, en cuanto carguemos datos reales).">
 <meta name="theme-color" content="#f3f5f9">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32x32.png">
@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 
-<body data-page="matches">
+<body data-page="mercado">
 
 <div class="aurora"></div>
 <div class="grid-bg"></div>
@@ -35,7 +35,7 @@
           <img class="logo__img logo__img--for-light" src="brand/logo-dark-320.png" alt="IFLXI" width="120" height="48">
           <img class="logo__img logo__img--for-dark" src="brand/logo-white-320.png" alt="IFLXI" width="120" height="48">
         </a>
-        <a class="live-pill" href="partidos.html" title="Ver partidos en directo"><span class="dot"></span> EN VIVO</a>
+        <span class="live-pill" title="Datos en tiempo real"><span class="dot"></span> EN VIVO</span>
       </div>
 
       <div class="header-search searchbox">
@@ -68,10 +68,10 @@
     <div class="container header__bar-inner">
       <nav class="nav" id="site-nav">
         <a href="index.html" data-nav="home">Descubre</a>
-        <a href="fichajes.html">Fichajes y rumores</a>
-        <a href="mercado.html">Valores de mercado</a>
+        <a href="fichajes.html" data-nav="fichajes">Fichajes y rumores</a>
+        <a href="mercado.html" data-nav="mercado" aria-current="page">Valores de mercado</a>
+        <a href="partidos.html">En directo</a>
         <a href="competiciones.html" data-nav="competitions">Competiciones</a>
-        <a href="partidos.html" data-nav="matches" aria-current="page">Partidos</a>
         <a href="comparador.html" data-nav="compare">Comparador</a>
         <a href="cuenta.html" data-nav="cuenta">Cuenta</a>
       </nav>
@@ -80,26 +80,29 @@
 </header>
 
 <main>
-  <section class="section page-matches">
+  <section class="section">
     <div class="container">
       <div class="section-head">
         <div>
-          <span class="eyebrow">Resultados</span>
-          <h1>Partidos del día</h1>
-          <p id="matches-date">Hoy</p>
-        </div>
-        <div class="matches-summary">
-          <span class="match-card__live"><span class="dot"></span> <b id="live-count">0</b> en directo</span>
-          <a class="btn btn--sm" href="competiciones.html">Competiciones</a>
+          <span class="eyebrow">Mercado</span>
+          <h1>Valores de mercado</h1>
+          <p>Ranking de jugadores por valor de mercado.</p>
         </div>
       </div>
-      <div id="matches-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 20px">
-        <button type="button" class="chip" data-status="">Todos</button>
-        <button type="button" class="chip" data-status="live">En vivo</button>
-        <button type="button" class="chip" data-status="finished">Terminado</button>
-        <button type="button" class="chip" data-status="scheduled">Próximamente</button>
+
+      <div class="panel tm-panel">
+        <div class="panel__head tm-panel__head">
+          <h3>Próximamente</h3>
+        </div>
+        <div style="padding:32px 20px">
+          <p class="empty-note">
+            Todavía no tenemos valores de mercado reales cargados — API-Football no proporciona
+            esta cifra, así que hace falta cargarla de otra fuente antes de poder mostrar un
+            ranking real. En cuanto esté disponible, aparecerá aquí.
+          </p>
+          <p><a class="btn btn--sm" href="fichajes.html">Ver fichajes reales →</a></p>
+        </div>
       </div>
-      <div class="match-day" id="day-matches"></div>
     </div>
   </section>
 </main>

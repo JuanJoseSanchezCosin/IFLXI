@@ -13,13 +13,18 @@ Abre: http://127.0.0.1:8787
 
 from __future__ import annotations
 
+import io
+import json
 import os
+import uuid as uuid_lib
 from datetime import date
 from pathlib import Path
 
 import psycopg
+import requests
+from PIL import Image
 from psycopg.rows import dict_row
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -215,6 +220,14 @@ def player_photo_url(api_football_id: int | None) -> str | None:
     if not api_football_id:
         return None
     return f"https://media.api-sports.io/football/players/{api_football_id}.png"
+
+
+def league_logo_url(api_football_id: int | None) -> str | None:
+    """Logo real de la liga vía CDN de API-Football, a partir de
+    competition.api_football_id."""
+    if not api_football_id:
+        return None
+    return f"https://media.api-sports.io/football/leagues/{api_football_id}.png"
 
 
 def club_payload(row: dict | None) -> dict:
@@ -471,12 +484,14 @@ def players_top_valued(limit: int = Query(50, ge=1, le=200)):
                 """
                 SELECT
                   p.id AS player_id,
+                  p.api_football_id AS player_api_football_id,
                   per.display_name AS player_name,
                   p.primary_position,
                   p.current_market_value AS value_amount,
                   p.current_market_value_currency::text AS currency,
                   t.id AS team_id,
                   t.name_default AS team_name,
+                  t.api_football_id AS team_api_football_id,
                   nat.name_default AS nationality
                 FROM player p
                 JOIN person per ON per.id = p.person_id
@@ -495,11 +510,13 @@ def players_top_valued(limit: int = Query(50, ge=1, le=200)):
             {
                 "playerId": str(r["player_id"]),
                 "player": r["player_name"],
+                "playerPhoto": player_photo_url(r["player_api_football_id"]),
                 "position": r["primary_position"],
                 "value": float(r["value_amount"]) if r["value_amount"] is not None else None,
                 "currency": r["currency"],
                 "teamId": str(r["team_id"]) if r["team_id"] else None,
                 "team": r["team_name"],
+                "teamLogo": team_logo_url(r["team_api_football_id"]),
                 "nationality": r["nationality"],
             }
             for r in rows
@@ -1103,12 +1120,25 @@ def search(q: str = Query("", min_length=1)):
 
 
 @app.get("/api/transfers")
-def transfers(limit: int = Query(20, ge=1, le=100)):
-    """Últimos fichajes desde TRANSFER (vacío hasta cargar Excel o API)."""
+def transfers(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    type: str | None = Query(None, description="permanent | loan | loan_end | free | end_of_contract | academy_promotion | unknown"),
+):
+    """Fichajes desde TRANSFER, con paginación y filtro opcional por tipo."""
+    clauses: list[str] = []
+    params: list = []
+    if type:
+        clauses.append("t.transfer_type::text = %s")
+        params.append(type)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+
     with connect() as conn:
         with conn.cursor() as cur:
+            cur.execute(f"SELECT COUNT(*) AS n FROM transfer t {where}", params)
+            total = int(cur.fetchone()["n"])
             cur.execute(
-                """
+                f"""
                 SELECT
                   t.id,
                   t.transfer_type::text AS transfer_type,
@@ -1129,13 +1159,14 @@ def transfers(limit: int = Query(20, ge=1, le=100)):
                 JOIN person per ON per.id = p.person_id
                 LEFT JOIN team tf ON tf.id = t.from_team_id
                 LEFT JOIN team tt ON tt.id = t.to_team_id
+                {where}
                 ORDER BY t.effective_date DESC NULLS LAST, t.created_at DESC
-                LIMIT %s
+                LIMIT %s OFFSET %s
                 """,
-                (limit,),
+                params + [limit, offset],
             )
             rows = cur.fetchall()
-    return [
+    items = [
         {
             "id": str(r["id"]),
             "playerId": str(r["player_id"]),
@@ -1154,6 +1185,7 @@ def transfers(limit: int = Query(20, ge=1, le=100)):
         }
         for r in rows
     ]
+    return {"total": total, "limit": limit, "offset": offset, "items": items}
 
 
 @app.get("/api/competitions")
@@ -1205,6 +1237,7 @@ def list_competitions(
           c.scope::text AS scope,
           c.gender::text AS gender,
           c.is_active,
+          c.api_football_id,
           co.name_default AS country_name,
           s.id AS season_id,
           s.name_default AS season_name,
@@ -1247,6 +1280,7 @@ def list_competitions(
             "scope": r["scope"],
             "gender": r["gender"],
             "isActive": bool(r["is_active"]),
+            "logo": league_logo_url(r["api_football_id"]),
             "country": r["country_name"] or ("Internacional" if r["scope"] == "international" else "—"),
             "seasonId": str(r["season_id"]) if r["season_id"] else None,
             "season": r["season_name"],
@@ -1277,6 +1311,7 @@ def get_competition(competition_id: str):
                   c.scope::text AS scope,
                   c.gender::text AS gender,
                   c.is_active,
+                  c.api_football_id,
                   co.name_default AS country_name,
                   s.id AS season_id,
                   s.name_default AS season_name,
@@ -1308,6 +1343,7 @@ def get_competition(competition_id: str):
                       t.id AS team_id,
                       t.name_default AS team_name,
                       t.code AS team_code,
+                      t.api_football_id,
                       ctr.name_default AS country_name,
                       %s AS competition_name,
                       (
@@ -1336,6 +1372,7 @@ def get_competition(competition_id: str):
         "scope": row["scope"],
         "gender": row["gender"],
         "isActive": bool(row["is_active"]),
+        "logo": league_logo_url(row["api_football_id"]),
         "country": row["country_name"]
         or ("Internacional" if row["scope"] == "international" else "—"),
         "seasonId": str(row["season_id"]) if row["season_id"] else None,
@@ -1382,8 +1419,11 @@ def match_list_payload(row: dict) -> dict:
     return {
         "id": str(row["id"]),
         "league": row.get("competition_name") or "—",
+        "leagueLogo": league_logo_url(row.get("competition_api_football_id")),
         "home": row.get("home_name") or "—",
+        "homeLogo": team_logo_url(row.get("home_api_football_id")),
         "away": row.get("away_name") or "—",
+        "awayLogo": team_logo_url(row.get("away_api_football_id")),
         "homeId": str(row["home_team_id"]) if row.get("home_team_id") else None,
         "awayId": str(row["away_team_id"]) if row.get("away_team_id") else None,
         "homeScore": row.get("home_score"),
@@ -1456,8 +1496,11 @@ SELECT
   m.home_score,
   m.away_score,
   th.name_default AS home_name,
+  th.api_football_id AS home_api_football_id,
   ta.name_default AS away_name,
-  c.name_default AS competition_name
+  ta.api_football_id AS away_api_football_id,
+  c.name_default AS competition_name,
+  c.api_football_id AS competition_api_football_id
 FROM match m
 JOIN team th ON th.id = m.home_team_id
 JOIN team ta ON ta.id = m.away_team_id
@@ -1610,6 +1653,391 @@ def competitions_page():
 @app.get("/competicion.html")
 def competition_detail_page():
     return FileResponse(ROOT / "competicion.html")
+
+
+# ===================== IMÁGENES DE NOTICIAS =====================
+
+IMAGE_SIZES = {
+    "main": (800, 600),   # noticia principal, 4:3
+    "mini": (400, 300),   # noticias mini, 4:3
+}
+
+
+def process_image_to_webp(raw: bytes, kind: str) -> bytes:
+    """Recorta al centro a la proporción del hueco (main 3:2, gallery 1:1),
+    redimensiona al tamaño real usado en la web y convierte a WebP."""
+    target_w, target_h = IMAGE_SIZES.get(kind, IMAGE_SIZES["mini"])
+    img = Image.open(io.BytesIO(raw))
+    img = img.convert("RGB")
+
+    target_ratio = target_w / target_h
+    w, h = img.size
+    current_ratio = w / h
+    if current_ratio > target_ratio:
+        new_w = int(h * target_ratio)
+        left = (w - new_w) // 2
+        img = img.crop((left, 0, left + new_w, h))
+    else:
+        new_h = int(w / target_ratio)
+        top = (h - new_h) // 2
+        img = img.crop((0, top, w, top + new_h))
+
+    img = img.resize((target_w, target_h), Image.LANCZOS)
+    out = io.BytesIO()
+    img.save(out, format="WEBP", quality=82)
+    return out.getvalue()
+
+
+def upload_to_supabase_storage(data: bytes, filename: str) -> str:
+    """Sube bytes al bucket público 'news-images' de Supabase Storage
+    y devuelve la URL pública final."""
+    base_url = os.environ.get("SUPABASE_URL")
+    service_key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not base_url or not service_key:
+        raise HTTPException(500, "Falta SUPABASE_URL o SUPABASE_SERVICE_KEY en el servidor")
+
+    upload_url = f"{base_url}/storage/v1/object/news-images/{filename}"
+    resp = requests.post(
+        upload_url,
+        headers={
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+            "Content-Type": "image/webp",
+            "x-upsert": "true",
+        },
+        data=data,
+        timeout=30,
+    )
+    if resp.status_code not in (200, 201):
+        raise HTTPException(502, f"Fallo al subir imagen a Supabase: {resp.status_code} {resp.text[:200]}")
+    return f"{base_url}/storage/v1/object/public/news-images/{filename}"
+
+
+@app.post("/api/admin/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    kind: str = Form("mini"),
+    x_admin_password: str | None = Header(None),
+):
+    require_admin(x_admin_password)
+    if kind not in IMAGE_SIZES:
+        kind = "mini"
+    raw = await file.read()
+    try:
+        webp_bytes = process_image_to_webp(raw, kind)
+    except Exception as exc:
+        raise HTTPException(400, f"No se pudo procesar la imagen: {exc}")
+    filename = f"{kind}-{uuid_lib.uuid4().hex}.webp"
+    url = upload_to_supabase_storage(webp_bytes, filename)
+    return {"url": url}
+
+
+# ===================== NOTICIAS Y RUMORES (panel de admin) =====================
+
+
+def require_admin(x_admin_password: str | None = Header(None)) -> None:
+    """Protección simple por contraseña compartida (sin sistema de usuarios).
+    La contraseña real vive en la variable de entorno ADMIN_PASSWORD."""
+    expected = os.environ.get("ADMIN_PASSWORD")
+    if not expected:
+        raise HTTPException(500, "ADMIN_PASSWORD no configurada en el servidor")
+    if not x_admin_password or x_admin_password != expected:
+        raise HTTPException(401, "Contraseña de administrador incorrecta")
+
+
+@app.get("/api/news")
+def list_news(limit: int = Query(10, ge=1, le=50)):
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, slot, title, excerpt, tag, image_url, created_at
+                FROM news_item
+                WHERE is_published = TRUE
+                ORDER BY slot ASC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(r["id"]),
+            "slot": r["slot"],
+            "title": r["title"],
+            "excerpt": r["excerpt"],
+            "tag": r["tag"],
+            "image": r["image_url"],
+            "isMain": r["slot"] == 0,
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/admin/news/slots")
+def list_news_slots(x_admin_password: str | None = Header(None)):
+    """Estado de los 7 huecos (0=principal, 1..6=mini) para el panel de admin."""
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT slot, id, title, excerpt, tag, image_url FROM news_item")
+            by_slot = {r["slot"]: r for r in cur.fetchall()}
+    return [
+        {
+            "slot": n,
+            "filled": n in by_slot,
+            "id": str(by_slot[n]["id"]) if n in by_slot else None,
+            "title": by_slot[n]["title"] if n in by_slot else None,
+            "excerpt": by_slot[n]["excerpt"] if n in by_slot else None,
+            "tag": by_slot[n]["tag"] if n in by_slot else None,
+            "image": by_slot[n]["image_url"] if n in by_slot else None,
+        }
+        for n in range(0, 7)
+    ]
+
+
+@app.post("/api/admin/news/slot/{slot}")
+def upsert_news_slot(slot: int, payload: dict, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    if slot < 0 or slot > 6:
+        raise HTTPException(400, "Hueco fuera de rango (0-6)")
+    title = (payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "Falta el título")
+    excerpt = (payload.get("excerpt") or "").strip() or None
+    tag = (payload.get("tag") or "Mercado").strip()
+    image_url = (payload.get("image") or "").strip() or None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO news_item (slot, title, excerpt, tag, image_url)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (slot) DO UPDATE SET
+                  title = EXCLUDED.title,
+                  excerpt = EXCLUDED.excerpt,
+                  tag = EXCLUDED.tag,
+                  image_url = COALESCE(EXCLUDED.image_url, news_item.image_url),
+                  updated_at = now()
+                RETURNING id
+                """,
+                (slot, title, excerpt, tag, image_url),
+            )
+            new_id = cur.fetchone()["id"]
+        conn.commit()
+    return {"id": str(new_id), "slot": slot}
+
+
+@app.delete("/api/admin/news/slot/{slot}")
+def delete_news_slot(slot: int, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM news_item WHERE slot = %s", (slot,))
+        conn.commit()
+    return {"ok": True}
+
+
+# ===================== VALORES DE MERCADO (panel de admin) =====================
+
+
+@app.get("/api/admin/market-values")
+def list_market_values(limit: int = Query(30, ge=1, le=100), x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                  mv.id, mv.value_amount, mv.currency::text AS currency, mv.recorded_on,
+                  p.id AS player_id, per.display_name AS player_name
+                FROM market_value_history mv
+                JOIN player p ON p.id = mv.player_id
+                JOIN person per ON per.id = p.person_id
+                WHERE mv.source = 'manual'
+                ORDER BY mv.recorded_on DESC, mv.created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(r["id"]),
+            "playerId": str(r["player_id"]),
+            "player": r["player_name"],
+            "value": float(r["value_amount"]),
+            "currency": r["currency"],
+            "recordedOn": r["recorded_on"].isoformat() if r["recorded_on"] else None,
+        }
+        for r in rows
+    ]
+
+
+@app.post("/api/admin/market-value")
+def upsert_market_value(payload: dict, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    player_id = (payload.get("playerId") or "").strip()
+    if not player_id:
+        raise HTTPException(400, "Falta el jugador")
+    try:
+        value_amount = float(payload.get("value"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Valor inválido")
+    if value_amount <= 0:
+        raise HTTPException(400, "El valor debe ser mayor que 0")
+    currency = (payload.get("currency") or "EUR").strip().upper()
+    if currency not in ("EUR", "USD", "GBP"):
+        currency = "EUR"
+    recorded_on = (payload.get("recordedOn") or "").strip() or date.today().isoformat()
+
+    with connect() as conn:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                # Fuente de verdad: MARKET_VALUE_HISTORY (regla 15: UNIQUE por jugador+fecha+origen)
+                cur.execute(
+                    """
+                    INSERT INTO market_value_history (player_id, value_amount, currency, recorded_on, source)
+                    VALUES (%s, %s, %s, %s, 'manual')
+                    ON CONFLICT (player_id, recorded_on, source) DO UPDATE SET
+                      value_amount = EXCLUDED.value_amount,
+                      currency = EXCLUDED.currency
+                    RETURNING id
+                    """,
+                    (player_id, value_amount, currency, recorded_on),
+                )
+                new_id = cur.fetchone()["id"]
+                # Caché (regla 3): player.current_market_value se deriva del registro
+                # más reciente en MARKET_VALUE_HISTORY para ese jugador.
+                cur.execute(
+                    """
+                    UPDATE player SET
+                      current_market_value = %s,
+                      current_market_value_currency = %s
+                    WHERE id = %s
+                    """,
+                    (value_amount, currency, player_id),
+                )
+    return {"id": str(new_id)}
+
+
+@app.delete("/api/admin/market-value/{value_id}")
+def delete_market_value(value_id: str, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT player_id FROM market_value_history WHERE id = %s",
+                    (value_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(404, "No encontrado")
+                player_id = row["player_id"]
+                cur.execute("DELETE FROM market_value_history WHERE id = %s", (value_id,))
+                # Recalcular la caché: coger el registro más reciente que quede, o vaciarla si no queda ninguno.
+                cur.execute(
+                    """
+                    SELECT value_amount, currency::text AS currency
+                    FROM market_value_history
+                    WHERE player_id = %s
+                    ORDER BY recorded_on DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (player_id,),
+                )
+                latest = cur.fetchone()
+                if latest:
+                    cur.execute(
+                        "UPDATE player SET current_market_value = %s, current_market_value_currency = %s WHERE id = %s",
+                        (latest["value_amount"], latest["currency"], player_id),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE player SET current_market_value = NULL, current_market_value_currency = NULL WHERE id = %s",
+                        (player_id,),
+                    )
+    return {"ok": True}
+
+
+@app.get("/api/rumors")
+def list_rumors(limit: int = Query(10, ge=1, le=50)):
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                  r.id, r.player_name, r.current_club, r.interested_club, r.level,
+                  r.created_at, p.api_football_id AS player_api_football_id,
+                  tc.name_default AS current_club_real, tc.api_football_id AS current_club_api_football_id,
+                  ti.name_default AS interested_club_real, ti.api_football_id AS interested_club_api_football_id
+                FROM rumor_item r
+                LEFT JOIN player p ON p.id = r.player_id
+                LEFT JOIN team tc ON tc.id = r.current_club_id
+                LEFT JOIN team ti ON ti.id = r.interested_club_id
+                WHERE r.is_published = TRUE
+                ORDER BY r.created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(r["id"]),
+            "player": r["player_name"],
+            "playerPhoto": player_photo_url(r["player_api_football_id"]),
+            "club": r["current_club_real"] or r["current_club"],
+            "clubLogo": team_logo_url(r["current_club_api_football_id"]),
+            "interested": r["interested_club_real"] or r["interested_club"],
+            "interestedLogo": team_logo_url(r["interested_club_api_football_id"]),
+            "level": r["level"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        }
+        for r in rows
+    ]
+
+
+@app.post("/api/admin/rumors")
+def create_rumor(payload: dict, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    player_name = (payload.get("player") or "").strip()
+    interested = (payload.get("interested") or "").strip()
+    if not player_name or not interested:
+        raise HTTPException(400, "Faltan jugador o club interesado")
+    club = (payload.get("club") or "").strip() or None
+    level = (payload.get("level") or "media").strip()
+    if level not in ("baja", "media", "alta"):
+        level = "media"
+    player_id = (payload.get("playerId") or "").strip() or None
+    club_id = (payload.get("clubId") or "").strip() or None
+    interested_id = (payload.get("interestedId") or "").strip() or None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO rumor_item
+                  (player_name, player_id, current_club, current_club_id, interested_club, interested_club_id, level)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (player_name, player_id, club, club_id, interested, interested_id, level),
+            )
+            new_id = cur.fetchone()["id"]
+        conn.commit()
+    return {"id": str(new_id)}
+
+
+@app.delete("/api/admin/rumors/{rumor_id}")
+def delete_rumor(rumor_id: str, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM rumor_item WHERE id = %s", (rumor_id,))
+        conn.commit()
+    return {"ok": True}
 
 
 app.mount("/", StaticFiles(directory=str(ROOT), html=True), name="static")

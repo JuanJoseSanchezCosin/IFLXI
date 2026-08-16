@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de administración | IFLXI</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { min-height: 100%; margin: 0; }
+  body {
+    background: linear-gradient(180deg, #f3f5f9 0%, #eef1f7 100%);
+    background-attachment: fixed;
+    position: relative;
+    overflow-x: hidden;
+  }
+  .admin-league-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .admin-league-bg img {
+    position: absolute;
+    opacity: 0.10;
+  }
+  .admin-league-bg img:nth-child(1)  { width: 220px; top: -30px;   left: -40px; }
+  .admin-league-bg img:nth-child(2)  { width: 190px; top: 4%;      right: -30px; }
+  .admin-league-bg img:nth-child(3)  { width: 260px; top: 30%;     left: -70px; }
+  .admin-league-bg img:nth-child(4)  { width: 200px; top: 26%;     right: 2%; }
+  .admin-league-bg img:nth-child(5)  { width: 170px; top: 52%;     left: 44%; }
+  .admin-league-bg img:nth-child(6)  { width: 230px; bottom: -50px; left: 4%; }
+  .admin-league-bg img:nth-child(7)  { width: 210px; bottom: 2%;   right: -20px; }
+  .admin-league-bg img:nth-child(8)  { width: 160px; top: 70%;     left: 8%; }
+  .admin-league-bg img:nth-child(9)  { width: 180px; top: 12%;     left: 30%; }
+  .admin-league-bg img:nth-child(10) { width: 150px; bottom: 20%;  right: 30%; }
+
+  .admin-hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 44px 16px 8px;
+  }
+  .admin-hero img { display: block; margin: 0 auto 14px; height: 46px; width: auto; }
+  .admin-hero h1 {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-weight: 800;
+    font-size: 1.7rem;
+    letter-spacing: -0.01em;
+    color: #12151f;
+  }
+  .admin-hero p {
+    margin: 6px 0 0;
+    color: #6b7280;
+    font-size: 0.98rem;
+  }
+  .admin-wrap { position: relative; z-index: 1; }
+  .admin-card { background: var(--panel, #fff); border: 1px solid var(--line, #e2e5ea); border-radius: 14px; padding: 24px; margin-bottom: 24px; box-shadow: 0 8px 28px rgba(20,25,40,.08); }
+  .admin-card h2 { margin: 0 0 4px; font-size: 1.15rem; font-family: var(--font-display, inherit); letter-spacing: -0.01em; }
+  .admin-card p.hint { margin: 0 0 18px; color: var(--muted, #6b7280); font-size: 0.9rem; }
+  .admin-field { margin-bottom: 14px; }
+  .admin-field label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
+  .admin-field input, .admin-field select, .admin-field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line, #d7dae0); border-radius: 8px;
+    font-family: inherit; font-size: 0.95rem; box-sizing: border-box; background: var(--bg, #fff); color: var(--text, #111);
+  }
+  .admin-field textarea { resize: vertical; min-height: 70px; }
+  .admin-btn { background: #111; color: #fff; border: none; border-radius: 8px; padding: 11px 20px; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+  .admin-btn:hover { background: #333; }
+  .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .admin-msg { margin-top: 10px; font-size: 0.88rem; }
+  .admin-msg.ok { color: #147a4a; }
+  .admin-msg.err { color: #b3261e; }
+  .admin-list { margin-top: 18px; border-top: 1px solid var(--line, #e2e5ea); padding-top: 14px; }
+  .admin-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.9rem; border-bottom: 1px solid var(--line, #f0f1f3); }
+  .admin-list-item button { background: none; border: none; color: #b3261e; cursor: pointer; font-size: 0.85rem; }
+  .admin-gate { max-width: 360px; margin: 8px auto 100px; text-align: center; }
+  .admin-thumb { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; border: 1px solid var(--line, #ddd); }
+</style>
+</head>
+
+<body>
+
+<div class="admin-league-bg" aria-hidden="true">
+  <img src="https://media.api-sports.io/football/leagues/39.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/140.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/135.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/78.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/61.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/2.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/39.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/140.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/135.png" alt="" loading="lazy">
+  <img src="https://media.api-sports.io/football/leagues/78.png" alt="" loading="lazy">
+</div>
+
+<div class="admin-hero">
+  <img src="brand/logo-dark-320.png" alt="IFLXI">
+  <h1>Panel de administración</h1>
+  <p>Publica noticias, rumores y valores de mercado — en directo en la web.</p>
+</div>
+
+<div class="admin-wrap">
+
+  <div id="admin-gate" class="admin-gate admin-card">
+    <p class="hint">Introduce la contraseña para publicar noticias y rumores.</p>
+    <div class="admin-field">
+      <input type="password" id="admin-password" placeholder="Contraseña" autocomplete="current-password">
+    </div>
+    <button class="admin-btn" id="admin-enter">Entrar</button>
+    <p class="admin-msg err" id="admin-gate-msg"></p>
+  </div>
+
+  <div id="admin-panel" style="display:none">
+    <h1 style="margin:0 0 4px;font-family:var(--font-display, inherit);font-weight:800;letter-spacing:-0.01em;font-size:1.5rem;color:#12151f">Publicar contenido</h1>
+    <p class="hint" style="margin-bottom:24px">Rellena el formulario y dale a publicar — sale en la web al instante.</p>
+
+    <div class="admin-card">
+      <h2>Noticia principal</h2>
+      <p class="hint">La noticia destacada grande de la portada. Publicar aquí sustituye siempre a la anterior.</p>
+      <form id="form-news-main">
+        <div class="admin-field">
+          <label for="main-title">Titular</label>
+          <input type="text" id="main-title" required placeholder="Ej: Mbappé lidera las búsquedas IFLXI">
+        </div>
+        <div class="admin-field">
+          <label for="main-excerpt">Detalle (opcional)</label>
+          <textarea id="main-excerpt" placeholder="Una o dos frases de contexto"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="main-tag">Categoría</label>
+          <select id="main-tag">
+            <option>Mercado</option>
+            <option>Lab</option>
+            <option>Arena</option>
+            <option>Scouting</option>
+            <option>Datos</option>
+            <option>Clubes</option>
+          </select>
+        </div>
+        <div class="admin-field">
+          <label for="main-image">Imagen (deja vacío para no cambiarla)</label>
+          <input type="file" id="main-image" accept="image/*">
+          <div id="main-image-preview" style="margin-top:8px;display:flex;gap:8px"></div>
+        </div>
+        <button class="admin-btn" type="submit">Publicar como principal</button>
+        <button type="button" class="admin-btn" id="main-clear" style="background:#b3261e;margin-left:8px">Vaciar</button>
+        <p class="admin-msg" id="main-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card">
+      <h2>Noticias mini</h2>
+      <p class="hint">Elige qué hueco quieres cambiar (Mini 1 a Mini 6) y rellena su contenido.</p>
+      <div class="admin-field">
+        <label for="mini-slot-select">Hueco</label>
+        <select id="mini-slot-select">
+          <option value="1">Mini 1</option>
+          <option value="2">Mini 2</option>
+          <option value="3">Mini 3</option>
+          <option value="4">Mini 4</option>
+          <option value="5">Mini 5</option>
+          <option value="6">Mini 6</option>
+        </select>
+      </div>
+      <form id="form-news-mini">
+        <div class="admin-field">
+          <label for="mini-title">Titular</label>
+          <input type="text" id="mini-title" required placeholder="Ej: Plantillas Big 5 sincronizadas">
+        </div>
+        <div class="admin-field">
+          <label for="mini-tag">Categoría</label>
+          <select id="mini-tag">
+            <option>Mercado</option>
+            <option>Lab</option>
+            <option>Arena</option>
+            <option>Scouting</option>
+            <option>Datos</option>
+            <option>Clubes</option>
+          </select>
+        </div>
+        <div class="admin-field">
+          <label for="mini-image">Imagen (deja vacío para no cambiarla)</label>
+          <input type="file" id="mini-image" accept="image/*">
+          <div id="mini-image-preview" style="margin-top:8px;display:flex;gap:8px"></div>
+        </div>
+        <button class="admin-btn" type="submit">Publicar en este hueco</button>
+        <button type="button" class="admin-btn" id="mini-clear" style="background:#b3261e;margin-left:8px">Vaciar hueco</button>
+        <p class="admin-msg" id="mini-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card">
+      <h2>Rumor de fichaje</h2>
+      <p class="hint">Jugador, club interesado y qué tan fiable crees que es el rumor.</p>
+      <form id="form-rumor">
+        <div class="admin-field" style="position:relative">
+          <label for="rumor-player">Jugador</label>
+          <input type="text" id="rumor-player" required placeholder="Escribe para buscar…" autocomplete="off">
+          <input type="hidden" id="rumor-player-id">
+          <div id="rumor-player-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+        </div>
+        <div class="admin-field">
+          <label for="rumor-club">Club actual (opcional)</label>
+          <input type="text" id="rumor-club" placeholder="Se rellena solo al elegir jugador" readonly>
+          <input type="hidden" id="rumor-club-id">
+        </div>
+        <div class="admin-field" style="position:relative">
+          <label for="rumor-interested">Club interesado</label>
+          <input type="text" id="rumor-interested" required placeholder="Escribe para buscar…" autocomplete="off">
+          <input type="hidden" id="rumor-interested-id">
+          <div id="rumor-interested-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+        </div>
+        <div class="admin-field">
+          <label for="rumor-level">Fiabilidad</label>
+          <select id="rumor-level">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <button class="admin-btn" type="submit">Publicar rumor</button>
+        <p class="admin-msg" id="rumor-msg"></p>
+      </form>
+      <div class="admin-list" id="rumor-list"></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Valor de mercado</h2>
+      <p class="hint">API-Football no da este dato — se carga a mano, jugador por jugador.</p>
+      <form id="form-market">
+        <div class="admin-field" style="position:relative">
+          <label for="market-player">Jugador</label>
+          <input type="text" id="market-player" required placeholder="Escribe para buscar…" autocomplete="off">
+          <input type="hidden" id="market-player-id">
+          <div id="market-player-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+        </div>
+        <div class="admin-field">
+          <label for="market-value">Valor (millones de €)</label>
+          <input type="number" id="market-value" required min="0.01" step="0.01" placeholder="Ej: 120">
+        </div>
+        <button class="admin-btn" type="submit">Guardar valor</button>
+        <p class="admin-msg" id="market-msg"></p>
+      </form>
+      <div class="admin-list" id="market-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  let ADMIN_PASSWORD = "";
+
+  const gate = document.getElementById("admin-gate");
+  const panel = document.getElementById("admin-panel");
+  const gateMsg = document.getElementById("admin-gate-msg");
+
+  async function apiFetch(url, options = {}) {
+    const headers = Object.assign({}, options.headers, {
+      "X-Admin-Password": ADMIN_PASSWORD,
+      "Content-Type": "application/json",
+    });
+    const res = await fetch(url, Object.assign({}, options, { headers }));
+    if (!res.ok) {
+      let msg = "Error " + res.status;
+      try { const j = await res.json(); if (j.detail) msg = j.detail; } catch (_) {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function checkPassword() {
+    // GET a un endpoint protegido: 200 = contraseña correcta, error = mostramos el motivo real.
+    try {
+      await apiFetch("/api/admin/news/slots", { method: "GET" });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e.message };
+    }
+  }
+
+  let SLOTS = {};
+
+  function fillSlotForm(prefix, slotData) {
+    document.getElementById(`${prefix}-title`).value = slotData?.title || "";
+    if (document.getElementById(`${prefix}-excerpt`)) {
+      document.getElementById(`${prefix}-excerpt`).value = slotData?.excerpt || "";
+    }
+    document.getElementById(`${prefix}-tag`).value = slotData?.tag || "Mercado";
+    const preview = document.getElementById(`${prefix}-image-preview`);
+    preview.innerHTML = slotData?.image
+      ? `<img class="admin-thumb" src="${slotData.image}">`
+      : "";
+  }
+
+  document.getElementById("admin-enter").addEventListener("click", async () => {
+    const pass = document.getElementById("admin-password").value;
+    if (!pass) return;
+    ADMIN_PASSWORD = pass;
+    gateMsg.textContent = "Comprobando…";
+    const result = await checkPassword();
+    if (!result.ok) {
+      gateMsg.textContent = result.message || "Contraseña incorrecta.";
+      ADMIN_PASSWORD = "";
+      return;
+    }
+    gateMsg.textContent = "";
+    gate.style.display = "none";
+    panel.style.display = "block";
+    await loadSlots();
+    loadRumors();
+    loadMarketValues();
+  });
+
+  async function loadSlots() {
+    try {
+      const slots = await apiFetch("/api/admin/news/slots", { method: "GET" });
+      SLOTS = {};
+      slots.forEach((s) => { SLOTS[s.slot] = s; });
+      fillSlotForm("main", SLOTS[0]);
+      const miniSelect = document.getElementById("mini-slot-select");
+      fillSlotForm("mini", SLOTS[Number(miniSelect.value)]);
+    } catch (e) {
+      document.getElementById("main-msg").textContent = "No se pudieron cargar los huecos: " + e.message;
+    }
+  }
+
+  document.getElementById("mini-slot-select").addEventListener("change", (e) => {
+    fillSlotForm("mini", SLOTS[Number(e.target.value)]);
+    document.getElementById("mini-msg").textContent = "";
+  });
+
+  async function loadRumors() {
+    const list = document.getElementById("rumor-list");
+    list.innerHTML = "Cargando…";
+    try {
+      const items = await (await fetch("/api/rumors?limit=20")).json();
+      list.innerHTML = items.length
+        ? items.map((r) => `
+            <div class="admin-list-item">
+              <span>${r.player} → ${r.interested} (${r.level})</span>
+              <button data-id="${r.id}" data-kind="rumor">Borrar</button>
+            </div>`).join("")
+        : "<p class='hint'>Sin rumores todavía.</p>";
+    } catch (e) {
+      list.innerHTML = "<p class='admin-msg err'>No se pudo cargar la lista.</p>";
+    }
+  }
+
+  async function loadMarketValues() {
+    const list = document.getElementById("market-list");
+    list.innerHTML = "Cargando…";
+    try {
+      const items = await apiFetch("/api/admin/market-values?limit=20", { method: "GET" });
+      list.innerHTML = items.length
+        ? items.map((v) => `
+            <div class="admin-list-item">
+              <span>${v.player}: ${(v.value / 1_000_000).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M€</span>
+              <button data-id="${v.id}" data-kind="market">Borrar</button>
+            </div>`).join("")
+        : "<p class='hint'>Sin valores cargados todavía.</p>";
+    } catch (e) {
+      list.innerHTML = "<p class='admin-msg err'>No se pudo cargar la lista.</p>";
+    }
+  }
+
+  document.getElementById("form-market").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("market-msg");
+    msg.className = "admin-msg";
+    msg.textContent = "Guardando…";
+    try {
+      const millions = parseFloat(document.getElementById("market-value").value);
+      await apiFetch("/api/admin/market-value", {
+        method: "POST",
+        body: JSON.stringify({
+          playerId: document.getElementById("market-player-id").value,
+          value: millions * 1_000_000,
+          currency: "EUR",
+        }),
+      });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Guardado ✓";
+      document.getElementById("form-market").reset();
+      document.getElementById("market-player-id").value = "";
+      loadMarketValues();
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  // Autocompletado genérico (reutiliza /api/search, igual que la cabecera del sitio)
+  function wireAutocomplete({ inputId, idInputId, resultsId, extraFillId, source }) {
+    const input = document.getElementById(inputId);
+    const idInput = document.getElementById(idInputId);
+    const results = document.getElementById(resultsId);
+    let timer = null;
+
+    input.addEventListener("input", () => {
+      idInput.value = ""; // si edita el texto a mano, se pierde el enlace al dato real
+      if (extraFillId) document.getElementById(extraFillId).value = "";
+      const q = input.value.trim();
+      clearTimeout(timer);
+      if (q.length < 2) {
+        results.style.display = "none";
+        return;
+      }
+      timer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+          if (!res.ok) {
+            results.innerHTML = `<div class="admin-list-item" style="padding:8px 10px">Error del servidor (${res.status})</div>`;
+            results.style.display = "block";
+            return;
+          }
+          const data = await res.json();
+          const items = source === "players" ? data.players || [] : data.teams || [];
+          if (!items.length) {
+            results.innerHTML = `<div class="admin-list-item" style="padding:8px 10px">Sin resultados para "${q}"</div>`;
+            results.style.display = "block";
+            return;
+          }
+          results.innerHTML = items
+            .map((it) => {
+              const name = it.name;
+              const sub = source === "players" ? it.clubInfo?.name || "" : it.country || "";
+              const clubId = source === "players" ? it.club || "" : it.id;
+              const clubName = source === "players" ? it.clubInfo?.name || "" : it.name;
+              return `
+                <div class="admin-list-item" data-pick style="cursor:pointer;padding:8px 10px"
+                     data-id="${it.id}" data-name="${name}" data-club-id="${clubId}" data-club-name="${clubName}">
+                  <span>${name} <small style="color:var(--muted,#888)">${sub}</small></span>
+                </div>`;
+            })
+            .join("");
+          results.style.display = "block";
+        } catch (err) {
+          results.innerHTML = `<div class="admin-list-item" style="padding:8px 10px">Fallo de conexión: ${err.message}</div>`;
+          results.style.display = "block";
+        }
+      }, 250);
+    });
+
+    results.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-pick]");
+      if (!item) return;
+      input.value = item.dataset.name;
+      idInput.value = item.dataset.id;
+      if (extraFillId) {
+        document.getElementById(extraFillId).value = item.dataset.clubName || "";
+        document.getElementById(`${extraFillId}-id`).value = item.dataset.clubId || "";
+      }
+      results.style.display = "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!results.contains(e.target) && e.target !== input) {
+        results.style.display = "none";
+      }
+    });
+  }
+
+  wireAutocomplete({
+    inputId: "rumor-player", idInputId: "rumor-player-id", resultsId: "rumor-player-results",
+    extraFillId: "rumor-club", source: "players",
+  });
+  wireAutocomplete({
+    inputId: "rumor-interested", idInputId: "rumor-interested-id", resultsId: "rumor-interested-results",
+    source: "teams",
+  });
+  wireAutocomplete({
+    inputId: "market-player", idInputId: "market-player-id", resultsId: "market-player-results",
+    source: "players",
+  });
+
+  // Previsualización de imagen elegida (antes de subir) — reutilizable para ambos formularios
+  function wirePreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    input.addEventListener("change", () => {
+      preview.innerHTML = "";
+      const f = input.files[0];
+      if (!f) return;
+      const img = document.createElement("img");
+      img.className = "admin-thumb";
+      img.src = URL.createObjectURL(f);
+      preview.appendChild(img);
+    });
+  }
+  wirePreview("main-image", "main-image-preview");
+  wirePreview("mini-image", "mini-image-preview");
+
+  async function uploadImage(file, kind) {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("kind", kind);
+    const res = await fetch("/api/admin/upload-image", {
+      method: "POST",
+      headers: { "X-Admin-Password": ADMIN_PASSWORD },
+      body: fd,
+    });
+    if (!res.ok) {
+      let msg = "Error subiendo imagen";
+      try { const j = await res.json(); if (j.detail) msg = j.detail; } catch (_) {}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    return data.url;
+  }
+
+  function getSlotNumber(prefix) {
+    return prefix === "main" ? 0 : Number(document.getElementById("mini-slot-select").value);
+  }
+
+  async function submitNews({ formId, msgId, prefix, hasExcerpt, imageKind }) {
+    const form = document.getElementById(formId);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById(msgId);
+      msg.className = "admin-msg";
+      const slot = getSlotNumber(prefix);
+      try {
+        const imageInput = document.getElementById(`${prefix}-image`);
+        let image = "";
+        if (imageInput.files[0]) {
+          msg.textContent = "Subiendo imagen…";
+          image = await uploadImage(imageInput.files[0], imageKind);
+        }
+        msg.textContent = "Publicando…";
+        await apiFetch(`/api/admin/news/slot/${slot}`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: document.getElementById(`${prefix}-title`).value,
+            excerpt: hasExcerpt ? document.getElementById(`${prefix}-excerpt`).value : "",
+            tag: document.getElementById(`${prefix}-tag`).value,
+            image,
+          }),
+        });
+        msg.className = "admin-msg ok";
+        msg.textContent = "Publicado ✓";
+        imageInput.value = "";
+        await loadSlots();
+      } catch (err) {
+        msg.className = "admin-msg err";
+        msg.textContent = err.message;
+      }
+    });
+  }
+
+  submitNews({ formId: "form-news-main", msgId: "main-msg", prefix: "main", hasExcerpt: true, imageKind: "main" });
+  submitNews({ formId: "form-news-mini", msgId: "mini-msg", prefix: "mini", hasExcerpt: false, imageKind: "mini" });
+
+  async function clearSlot(prefix) {
+    const slot = getSlotNumber(prefix);
+    const msg = document.getElementById(`${prefix}-msg`);
+    if (!confirm(`¿Vaciar este hueco (${prefix === "main" ? "Principal" : "Mini " + slot})?`)) return;
+    try {
+      await apiFetch(`/api/admin/news/slot/${slot}`, { method: "DELETE" });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Hueco vaciado ✓";
+      document.getElementById(`form-news-${prefix}`).reset();
+      await loadSlots();
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  }
+  document.getElementById("main-clear").addEventListener("click", () => clearSlot("main"));
+  document.getElementById("mini-clear").addEventListener("click", () => clearSlot("mini"));
+
+  document.getElementById("form-rumor").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("rumor-msg");
+    msg.className = "admin-msg";
+    msg.textContent = "Publicando…";
+    try {
+      await apiFetch("/api/admin/rumors", {
+        method: "POST",
+        body: JSON.stringify({
+          player: document.getElementById("rumor-player").value,
+          playerId: document.getElementById("rumor-player-id").value,
+          club: document.getElementById("rumor-club").value,
+          clubId: document.getElementById("rumor-club-id").value,
+          interested: document.getElementById("rumor-interested").value,
+          interestedId: document.getElementById("rumor-interested-id").value,
+          level: document.getElementById("rumor-level").value,
+        }),
+      });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Publicado ✓";
+      document.getElementById("form-rumor").reset();
+      loadRumors();
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-kind]");
+    if (!btn) return;
+    const kind = btn.dataset.kind;
+    const id = btn.dataset.id;
+    if (!confirm("¿Borrar este elemento?")) return;
+    const routes = { rumor: `/api/admin/rumors/${id}`, market: `/api/admin/market-value/${id}` };
+    try {
+      await apiFetch(routes[kind], { method: "DELETE" });
+      if (kind === "rumor") loadRumors();
+      if (kind === "market") loadMarketValues();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+})();
+</script>
+</body>
+</html>

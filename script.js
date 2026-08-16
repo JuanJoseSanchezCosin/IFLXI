@@ -186,8 +186,9 @@ function leagueBadgeHTML(compOrName, size = "") {
     typeof compOrName === "object"
       ? compOrName.name || compOrName.league || "Liga"
       : String(compOrName || "Liga");
+  const realLogo = typeof compOrName === "object" ? compOrName.logo : null;
   const afId = resolveLeagueAfId(compOrName);
-  const logo = afLeagueLogo(afId);
+  const logo = realLogo || afLeagueLogo(afId);
   const short = (name || "LG").replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase() || "LG";
   const mod = size ? ` badge-league--${size}` : "";
   if (logo) {
@@ -866,7 +867,8 @@ const apiLive = {
 
   getTransfers: async (limit = 8) => {
     try {
-      const list = await jget(`/api/transfers?limit=${limit}`);
+      const data = await jget(`/api/transfers?limit=${limit}`);
+      const list = Array.isArray(data) ? data : data?.items;
       if (Array.isArray(list) && list.length) return list;
     } catch {
       /* vacío o API caída */
@@ -1125,11 +1127,11 @@ function avatarHTML(player, modifier = "") {
   return `<div class="avatar ${modifier}${photo ? " avatar--photo" : ""}" style="--c1:${club.c1};--c2:${club.c2}" data-fallback="${fallback}">${src}</div>`;
 }
 
-function clubBadgeHTML(name) {
+function clubBadgeHTML(name, realLogo) {
   const known = Object.values(CLUBS).find((c) => c.name === name);
   const { c1, c2 } = known || colorsFromText(name);
   const short = known ? known.short : initials(name) || "FC";
-  const logo = clubLogoURL(name);
+  const logo = realLogo || clubLogoURL(name);
   if (logo) {
     return `<span class="badge-club badge-club--img" title="${name}" data-fallback="${short}" data-c1="${c1}" data-c2="${c2}"><img src="${logo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const p=this.parentElement;p.classList.remove('badge-club--img');p.style.background='linear-gradient(150deg,'+p.dataset.c1+','+p.dataset.c2+')';p.textContent=p.dataset.fallback||'FC';"></span>`;
   }
@@ -1149,7 +1151,7 @@ function playerCardHTML(player) {
         ${avatarHTML(player)}
         <div>
           <div class="player-card__name">${player.name}</div>
-          <div class="player-card__club">${clubBadgeHTML(club.name)} ${club.name}</div>
+          <div class="player-card__club">${clubBadgeHTML(club.name, club.logo)} ${club.name}</div>
         </div>
       </div>
       <div class="player-card__stats">
@@ -1173,7 +1175,7 @@ function talentCardHTML(player) {
       <span class="talent-card__age">${player.age != null ? player.age : "—"}</span>
       ${avatarHTML(player)}
       <div class="player-card__name" style="margin-top:14px">${player.name}</div>
-      <div class="player-card__club">${clubBadgeHTML(club.name)} ${club.name}</div>
+      <div class="player-card__club">${clubBadgeHTML(club.name, club.logo)} ${club.name}</div>
       <div class="label-row"><span>Edad</span><b>${formatAge(player.age)}</b></div>
       <div class="progress"><span data-fill="${fill}"></span></div>
       <div class="label-row"><span>Valor</span><b class="value-tag">${formatValue(player.value)}</b></div>
@@ -1298,6 +1300,34 @@ function rumorRowHTML(rumor) {
     </tr>`;
 }
 
+/** Fila de "Jugadores más valiosos" real (desde /api/players/top-valued). */
+function realTopValuedRowHTML(p) {
+  const fallback = initials(p.player || "?");
+  const avatarInner = p.playerPhoto
+    ? `<img src="${p.playerPhoto}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const el=this.parentElement;el.classList.remove('avatar--photo');el.textContent=el.dataset.fallback||'';">`
+    : fallback;
+  const clubBadge = p.teamLogo
+    ? `<span class="badge-club badge-club--img" title="${p.team || ""}"><img src="${p.teamLogo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.closest('.badge-club').classList.remove('badge-club--img');this.closest('.badge-club').textContent='${initials(p.team || "FC")}';"></span>`
+    : `<span class="badge-club">${initials(p.team || "FC")}</span>`;
+  const value = p.value != null ? formatValue(p.value / 1_000_000) : "—";
+  return `
+    <tr data-href="jugador.html?id=${p.playerId}">
+      <td>
+        <div class="cell-player">
+          <div class="avatar avatar--sm${p.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a" data-fallback="${fallback}">${avatarInner}</div>
+          <div>
+            <b class="tm-link">${p.player}</b>
+            <small>${p.position || ""}</small>
+          </div>
+        </div>
+      </td>
+      <td class="td-club">
+        <span class="club-only" title="${p.team || ""}">${clubBadge}</span> ${p.team || "—"}
+      </td>
+      <td class="fee">${value}</td>
+    </tr>`;
+}
+
 function topValuedRowHTML(player) {
   const club = clubOf(player);
   return `
@@ -1312,7 +1342,7 @@ function topValuedRowHTML(player) {
         </div>
       </td>
       <td class="td-club">
-        <span class="club-only" title="${club.name}">${clubBadgeHTML(club.name)}</span> ${club.name}
+        <span class="club-only" title="${club.name}">${clubBadgeHTML(club.name, club.logo)}</span> ${club.name}
       </td>
       <td class="fee">${formatValue(player.value)}</td>
     </tr>`;
@@ -1337,9 +1367,37 @@ function topTransferRowHTML(transfer) {
         </div>
       </td>
       <td class="td-club">
-        <span class="club-only" title="${transfer.to}">${clubBadgeHTML(transfer.to)}</span> ${transfer.to}
+        <span class="club-only" title="${transfer.to}">${clubBadgeHTML(transfer.to)}</span>
       </td>
       <td class="${costClass}">${cost}</td>
+    </tr>`;
+}
+
+/** Fila de rumor real (desde /api/rumors, publicado por el panel de admin). */
+function realRumorRowHTML(r) {
+  const fallback = initials(r.player || "?");
+  const avatarInner = r.playerPhoto
+    ? `<img src="${r.playerPhoto}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const p=this.parentElement;p.classList.remove('avatar--photo');p.textContent=p.dataset.fallback||'';">`
+    : fallback;
+  const interestedBadge = r.interestedLogo
+    ? `<span class="badge-club badge-club--img" title="${r.interested}" data-fallback="${initials(r.interested || "FC")}"><img src="${r.interestedLogo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const p=this.parentElement;p.classList.remove('badge-club--img');p.textContent=p.dataset.fallback||'FC';"></span>`
+    : "";
+  const interestedCell = r.interestedLogo
+    ? `<span class="club-only" title="${r.interested}">${interestedBadge}</span> ${r.interested}`
+    : r.interested;
+  return `
+    <tr>
+      <td>
+        <div class="cell-player">
+          <div class="avatar avatar--sm${r.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a" data-fallback="${fallback}">${avatarInner}</div>
+          <div>
+            <b class="tm-link">${r.player}</b>
+            ${r.club ? `<small>${r.club}</small>` : ""}
+          </div>
+        </div>
+      </td>
+      <td class="td-club">${interestedCell}</td>
+      <td>${rumorLevelHTML(r.level)}</td>
     </tr>`;
 }
 
@@ -1360,18 +1418,18 @@ function matchCardHTML(match) {
   return `
     <a class="match-card ${isLive ? "match-card--live" : ""}" href="${href}">
       <div class="match-card__meta">
-        <span class="match-card__league">${leagueBadgeHTML(match.league)} <span>${match.league || "—"}</span></span>
+        <span class="match-card__league">${leagueBadgeHTML({ name: match.league, logo: match.leagueLogo })} <span>${match.league || "—"}</span></span>
         ${badge}
       </div>
       <div class="match-card__teams">
         <div class="match-card__team">
-          ${clubBadgeHTML(match.home)}
+          ${clubBadgeHTML(match.home, match.homeLogo)}
           <span>${match.home}</span>
         </div>
         ${score}
         <div class="match-card__team match-card__team--away">
           <span>${match.away}</span>
-          ${clubBadgeHTML(match.away)}
+          ${clubBadgeHTML(match.away, match.awayLogo)}
         </div>
       </div>
     </a>`;
@@ -1396,21 +1454,22 @@ function matchRowHTML(match) {
       <div class="match-row__status">${statusBit}</div>
       <div class="match-row__home">
         <span class="match-row__name">${match.home}</span>
-        ${clubBadgeHTML(match.home)}
+        ${clubBadgeHTML(match.home, match.homeLogo)}
       </div>
       ${score}
       <div class="match-row__away">
-        ${clubBadgeHTML(match.away)}
+        ${clubBadgeHTML(match.away, match.awayLogo)}
         <span class="match-row__name">${match.away}</span>
       </div>
     </a>`;
 }
 
 function matchLeagueBlockHTML(leagueName, matches) {
+  const leagueLogo = matches[0]?.leagueLogo;
   return `
     <section class="match-block">
       <header class="match-block__head">
-        ${leagueBadgeHTML(leagueName, "md")}
+        ${leagueBadgeHTML({ name: leagueName, logo: leagueLogo }, "md")}
         <div class="match-block__titles">
           <h2>${leagueName}</h2>
           <span>${matches.length} partido${matches.length === 1 ? "" : "s"}</span>
@@ -1476,12 +1535,12 @@ function matchDetailHTML(match) {
   return `
     <section class="match-detail reveal">
       <div class="match-detail__league">
-        ${leagueBadgeHTML(match.league, "md")}
+        ${leagueBadgeHTML({ name: match.league, logo: match.leagueLogo }, "md")}
         <span>${match.league || "—"}</span>
       </div>
       <div class="match-detail__board">
         <div class="match-detail__side">
-          <span class="match-detail__crest">${clubBadgeHTML(match.home)}</span>
+          <span class="match-detail__crest">${clubBadgeHTML(match.home, match.homeLogo)}</span>
           <h1>${match.home}</h1>
         </div>
         <div class="match-detail__scoreblock">
@@ -1489,7 +1548,7 @@ function matchDetailHTML(match) {
           <div class="match-detail__status">${statusLabel}</div>
         </div>
         <div class="match-detail__side match-detail__side--away">
-          <span class="match-detail__crest">${clubBadgeHTML(match.away)}</span>
+          <span class="match-detail__crest">${clubBadgeHTML(match.away, match.awayLogo)}</span>
           <h1>${match.away}</h1>
         </div>
       </div>
@@ -1992,32 +2051,76 @@ const FLASH_NEWS = [
   },
 ];
 
-function initNewsRail() {
+const NEWS_TAG_COLOR = {
+  Mercado: "#1d2b53",
+  Lab: "#147a4a",
+  Arena: "#9b1b25",
+  Scouting: "#153a8a",
+  Datos: "#4a0f1c",
+  Clubes: "#8d1237",
+};
+
+function relativeTimeShort(iso) {
+  if (!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.max(1, Math.round(diffMs / 60000));
+  if (mins < 60) return `${mins}'`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+async function initNewsRail() {
   const grid = $("#news-grid");
   const ticker = $("#news-ticker-track");
   if (!grid) return;
 
+  let items = FLASH_NEWS;
+  try {
+    const real = await jget("/api/news?limit=8");
+    if (Array.isArray(real) && real.length) {
+      items = real.map((n) => ({
+        slot: n.slot,
+        tag: n.tag,
+        time: relativeTimeShort(n.createdAt),
+        title: n.title,
+        excerpt: n.excerpt || "",
+        c: NEWS_TAG_COLOR[n.tag] || "#1d2b53",
+        image: n.image || null,
+      }));
+    }
+  } catch {
+    /* API caída o vacía → demo */
+  }
+
   if (ticker) {
-    const ticks = FLASH_NEWS.map(
+    const ticks = items.map(
       (n) => `<span class="tm-news__tick"><b>${n.tag}</b> ${n.title}</span>`
     ).join("");
     ticker.innerHTML = ticks + ticks;
   }
 
-  grid.innerHTML = FLASH_NEWS.map(
-    (n, i) => `
-    <a class="tm-news__item${i === 0 ? " tm-news__item--lead" : ""}" href="#fichajes" style="--c:${n.c}">
-      <div class="tm-news__thumb">${n.tag}</div>
+  const clampTitle = 'style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"';
+  const clampExcerpt = 'style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden"';
+
+  grid.innerHTML = items.map((n, i) => {
+    const thumb = n.image
+      ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:2px">`
+      : n.tag;
+    const href = n.slot != null ? `noticia.html?slot=${n.slot}` : "#fichajes";
+    return `
+    <a class="tm-news__item${i === 0 ? " tm-news__item--lead" : ""}" href="${href}" style="--c:${n.c}">
+      <div class="tm-news__thumb">${thumb}</div>
       <div class="tm-news__body">
         <div class="tm-news__meta">
           <span class="tm-news__cat">${n.tag}</span>
           <span>${n.time}</span>
         </div>
-        <h3 class="tm-news__title">${n.title}</h3>
-        ${i === 0 ? `<p class="tm-news__excerpt">${n.excerpt}</p>` : ""}
+        <h3 class="tm-news__title" ${clampTitle}>${n.title}</h3>
+        ${i === 0 ? `<p class="tm-news__excerpt" ${clampExcerpt}>${n.excerpt}</p>` : ""}
       </div>
-    </a>`
-  ).join("");
+    </a>`;
+  }).join("");
 }
 
 function initArena() {
@@ -2343,11 +2446,19 @@ async function initHome() {
     transfersBody.innerHTML = rows || `<tr><td colspan="3">Sin fichajes para mostrar.</td></tr>`;
   }
 
-  // Rumores: sin tabla real en el modelo de datos todavía → placeholder
-  // "próximamente" en vez de datos inventados.
+  // Rumores reales del panel de admin; si no hay ninguno, aviso honesto.
   const rumorsBody = $("#rumors-body");
   if (rumorsBody) {
-    rumorsBody.innerHTML = `<tr><td colspan="3" class="empty-note">Próximamente: rumores de fichajes basados en datos reales.</td></tr>`;
+    let realRumors = [];
+    try {
+      realRumors = await jget("/api/rumors?limit=5");
+    } catch {
+      /* API caída o vacía */
+    }
+    rumorsBody.innerHTML =
+      Array.isArray(realRumors) && realRumors.length
+        ? realRumors.map(realRumorRowHTML).join("")
+        : `<tr><td colspan="3" class="empty-note">Próximamente: rumores de fichajes basados en datos reales.</td></tr>`;
   }
 
   const liveHost = $("#live-matches");
@@ -2369,7 +2480,18 @@ async function initHome() {
   }
 
   const topValueBody = $("#top-value-body");
-  if (topValueBody) topValueBody.innerHTML = top10.slice(0, 5).map(topValuedRowHTML).join("");
+  if (topValueBody) {
+    let topValued = [];
+    try {
+      const data = await jget("/api/players/top-valued?limit=5");
+      topValued = data?.items || [];
+    } catch {
+      /* API caída o vacía */
+    }
+    topValueBody.innerHTML = topValued.length
+      ? topValued.map(realTopValuedRowHTML).join("")
+      : `<tr><td colspan="3" class="empty-note">Próximamente: ranking real en cuanto carguemos valores de mercado.</td></tr>`;
+  }
 
   const topTransfersBody = $("#top-transfers-body");
   if (topTransfersBody) {
@@ -2387,6 +2509,105 @@ async function initHome() {
   initRowLinks();
 }
 
+async function initNoticiaPage() {
+  const root = $("#noticia-root");
+  if (!root) return;
+  const slot = new URLSearchParams(location.search).get("slot");
+
+  let items = [];
+  try {
+    items = await jget("/api/news?limit=10");
+  } catch {
+    /* API caída */
+  }
+  const n = Array.isArray(items) ? items.find((it) => String(it.slot) === String(slot)) : null;
+
+  if (!n) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <h2>Noticia no encontrada</h2>
+        <p style="margin:10px 0 20px">Puede que se haya quitado o cambiado.</p>
+        <a class="btn btn--primary" href="index.html">Volver al inicio</a>
+      </div>`;
+    return;
+  }
+
+  document.title = `${n.title} | IFLXI`;
+  const when = relativeTimeShort(n.createdAt);
+  const paragraphs = (n.excerpt || "")
+    .split(/\n+/)
+    .filter((p) => p.trim())
+    .map((p) => `<p style="margin:0 0 16px;line-height:1.7">${p}</p>`)
+    .join("");
+
+  root.innerHTML = `
+    <nav class="breadcrumb" style="margin-bottom:18px">
+      <a href="index.html">Inicio</a> <span>›</span>
+      <span style="color:var(--muted)">${n.tag}</span>
+    </nav>
+    ${n.image ? `<img src="${n.image}" alt="" style="width:100%;border-radius:10px;margin-bottom:20px;max-height:420px;object-fit:cover">` : ""}
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+      <span class="tag tag--accent">${n.tag}</span>
+      <span style="color:var(--muted);font-size:.9rem">${when}</span>
+    </div>
+    <h1 style="margin:0 0 20px;font-size:2rem;line-height:1.2">${n.title}</h1>
+    ${paragraphs || `<p class="empty-note">Sin más detalle todavía.</p>`}
+    <p style="margin-top:32px"><a class="btn btn--sm" href="index.html">← Volver al inicio</a></p>`;
+}
+
+async function initFichajesPage() {
+  const body = $("#fichajes-body");
+  const moreBtn = $("#fichajes-more");
+  const countEl = $("#fichajes-count");
+  const filters = $("#fichajes-filters");
+  if (!body) return;
+
+  const state = { type: "", offset: 0, limit: 30, total: 0 };
+
+  const fetchPage = async (reset) => {
+    if (reset) {
+      state.offset = 0;
+      body.innerHTML = `<tr><td colspan="3">Cargando…</td></tr>`;
+    }
+    const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
+    if (state.type) params.set("type", state.type);
+    let data;
+    try {
+      data = await jget(`/api/transfers?${params}`);
+    } catch {
+      body.innerHTML = `<tr><td colspan="3">No se pudieron cargar los fichajes ahora mismo.</td></tr>`;
+      return;
+    }
+    const items = Array.isArray(data) ? data : data?.items || [];
+    state.total = Array.isArray(data) ? items.length : data?.total ?? items.length;
+
+    const rows = items.map(realTransferRowHTML).filter(Boolean).join("");
+    body.innerHTML = reset
+      ? rows || `<tr><td colspan="3">Sin fichajes para este filtro.</td></tr>`
+      : (body.innerHTML.includes("Cargando") ? "" : body.innerHTML) + rows;
+
+    state.offset += items.length;
+    if (countEl) countEl.textContent = `${nf0.format(state.offset)} de ${nf0.format(state.total)}`;
+    if (moreBtn) moreBtn.style.display = state.offset >= state.total ? "none" : "";
+  };
+
+  if (filters) {
+    filters.addEventListener("click", (e) => {
+      const item = e.target.closest(".tm-subnav__item");
+      if (!item) return;
+      e.preventDefault();
+      filters.querySelectorAll(".tm-subnav__item").forEach((el) => el.classList.remove("is-active"));
+      item.classList.add("is-active");
+      state.type = item.dataset.type || "";
+      fetchPage(true);
+    });
+  }
+
+  if (moreBtn) moreBtn.addEventListener("click", () => fetchPage(false));
+
+  fetchPage(true);
+}
+
 async function initMatchesPage() {
   const host = $("#day-matches");
   const dateEl = $("#matches-date");
@@ -2401,30 +2622,55 @@ async function initMatchesPage() {
 
   const matches = await api.getMatches().catch(() => MATCHES);
   const order = { live: 0, scheduled: 1, finished: 2 };
-  const sorted = (matches?.length ? matches : MATCHES)
+  const all = (matches?.length ? matches : MATCHES)
     .slice()
     .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
 
-  if (host) {
+  const renderList = (list) => {
+    if (!host) return;
     const byLeague = new Map();
-    for (const m of sorted) {
+    for (const m of list) {
       const key = m.league || "Otros";
       if (!byLeague.has(key)) byLeague.set(key, []);
       byLeague.get(key).push(m);
     }
     host.classList.add("match-day");
     host.classList.remove("live-grid", "live-grid--day");
-    host.innerHTML = [...byLeague.entries()]
-      .map(([league, list]) => matchLeagueBlockHTML(league, list))
-      .join("");
-  }
+    host.innerHTML = list.length
+      ? [...byLeague.entries()].map(([league, l]) => matchLeagueBlockHTML(league, l)).join("")
+      : `<p class="empty-note">Sin partidos para este filtro.</p>`;
+    observeReveals();
+  };
+
+  renderList(all);
 
   const liveCount = $("#live-count");
   if (liveCount) {
-    liveCount.textContent = String(sorted.filter((m) => m.status === "live").length);
+    liveCount.textContent = String(all.filter((m) => m.status === "live").length);
   }
 
-  observeReveals();
+  const filters = $("#matches-filters");
+  if (filters) {
+    const setActive = (btn) => {
+      filters.querySelectorAll(".chip").forEach((el) => {
+        el.style.background = "";
+        el.style.color = "";
+        el.style.borderColor = "";
+      });
+      btn.style.background = "var(--text)";
+      btn.style.color = "var(--bg)";
+      btn.style.borderColor = "var(--text)";
+    };
+    const firstChip = filters.querySelector(".chip");
+    if (firstChip) setActive(firstChip);
+    filters.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      setActive(btn);
+      const status = btn.dataset.status;
+      renderList(status ? all.filter((m) => m.status === status) : all);
+    });
+  }
 }
 
 async function initMatchDetailPage() {
@@ -2484,9 +2730,12 @@ function competitionRowHTML(c) {
 function competitionClubRowHTML(club) {
   const href = `club.html?id=${encodeURIComponent(club.id)}`;
   const squad = club.squadSize != null ? nf0.format(club.squadSize) : "—";
+  const badge = club.logo
+    ? `<span class="badge-club badge-club--img" title="${club.name}"><img src="${club.logo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.closest('.badge-club').classList.remove('badge-club--img');this.closest('.badge-club').textContent='${initials(club.name)}';"></span>`
+    : clubBadgeHTML(club.name, club.logo);
   return `
     <a class="comp-club" href="${href}">
-      ${clubBadgeHTML(club.name)}
+      ${badge}
       <div class="comp-club__meta">
         <b>${club.name}</b>
         <span>${club.country || "—"}</span>
@@ -2804,7 +3053,11 @@ async function initClubPage() {
       </nav>
       <div class="lab-hero__grid">
         <div class="lab-hero__id">
-          <div class="avatar avatar--xl lab-hero__badge" style="--c1:${club.c1};--c2:${club.c2}">${club.short}</div>
+          <div class="avatar avatar--xl lab-hero__badge${club.logo ? " avatar--photo" : ""}" style="--c1:${club.c1};--c2:${club.c2}" data-fallback="${club.short}">${
+            club.logo
+              ? `<img src="${club.logo}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;const p=this.parentElement;p.classList.remove('avatar--photo');p.textContent=p.dataset.fallback||'';">`
+              : club.short
+          }</div>
           <div>
             <span class="eyebrow">Radiografía Lab · IFLXI</span>
             <h1 class="lab-hero__name">${club.name}</h1>
@@ -2954,7 +3207,7 @@ async function initPlayerPage() {
           <h1 class="profile__name">${player.name}</h1>
           <div class="profile__tags">
             <span class="tag">${player.position}</span>
-            <span class="tag">${clubBadgeHTML(club.name)} ${club.name}</span>
+            <span class="tag">${clubBadgeHTML(club.name, club.logo)} ${club.name}</span>
             <span class="tag">${club.league}</span>
             ${rating != null ? `<span class="ai-score">${ICON_AI} Rating IA ${nf1.format(rating)}</span>` : `<span class="tag">Sin rating IA aún</span>`}
           </div>
@@ -2984,7 +3237,7 @@ async function initPlayerPage() {
         <div><dt>Posición</dt><dd>${player.pos}</dd></div>
         <div><dt>Altura</dt><dd>${player.height && player.height !== "—" ? `${player.height} cm` : "—"}</dd></div>
         <div><dt>Pie dominante</dt><dd>${player.foot || "—"}</dd></div>
-        <div><dt>Club actual</dt><dd>${clubBadgeHTML(club.name)} ${club.short}</dd></div>
+        <div><dt>Club actual</dt><dd>${clubBadgeHTML(club.name, club.logo)} ${club.short}</dd></div>
         <div><dt>Contrato hasta</dt><dd>${player.contract || "—"}</dd></div>
       </dl>
     </header>
@@ -3267,6 +3520,12 @@ document.addEventListener("DOMContentLoaded", () => {
       break;
     case "cuenta":
       initAuth();
+      break;
+    case "fichajes":
+      initFichajesPage();
+      break;
+    case "noticia":
+      initNoticiaPage();
       break;
     case "matches":
       initMatchesPage();
