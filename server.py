@@ -817,6 +817,128 @@ def competition_top_assists(
     }
 
 
+@app.get("/api/competitions/{competition_id}/standings")
+def competition_standings(competition_id: str):
+    """Clasificación real, calculada a partir de partidos terminados de la
+    temporada actual (o, si no hay ninguna marcada como actual, la más
+    reciente) de la competición."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, name_default
+                FROM season
+                WHERE competition_id = %s
+                ORDER BY is_current DESC, year_start DESC
+                LIMIT 1
+                """,
+                (competition_id,),
+            )
+            season_row = cur.fetchone()
+            if not season_row:
+                return {"season": None, "items": []}
+
+            cur.execute(
+                """
+                WITH team_matches AS (
+                  SELECT m.home_team_id AS team_id, m.home_score AS gf, m.away_score AS ga
+                  FROM match m
+                  WHERE m.season_id = %(season_id)s AND m.status = 'finished'
+                  UNION ALL
+                  SELECT m.away_team_id AS team_id, m.away_score AS gf, m.home_score AS ga
+                  FROM match m
+                  WHERE m.season_id = %(season_id)s AND m.status = 'finished'
+                )
+                SELECT
+                  t.id AS team_id,
+                  t.name_default AS team_name,
+                  t.api_football_id,
+                  COUNT(*) AS played,
+                  SUM(CASE WHEN tm.gf > tm.ga THEN 1 ELSE 0 END) AS won,
+                  SUM(CASE WHEN tm.gf = tm.ga THEN 1 ELSE 0 END) AS drawn,
+                  SUM(CASE WHEN tm.gf < tm.ga THEN 1 ELSE 0 END) AS lost,
+                  SUM(tm.gf) AS goals_for,
+                  SUM(tm.ga) AS goals_against,
+                  SUM(CASE WHEN tm.gf > tm.ga THEN 3 WHEN tm.gf = tm.ga THEN 1 ELSE 0 END) AS points
+                FROM team_matches tm
+                JOIN team t ON t.id = tm.team_id
+                GROUP BY t.id, t.name_default, t.api_football_id
+                ORDER BY points DESC, (SUM(tm.gf) - SUM(tm.ga)) DESC, SUM(tm.gf) DESC, t.name_default
+                """,
+                {"season_id": season_row["id"]},
+            )
+            rows = cur.fetchall()
+    return {
+        "season": season_row["name_default"],
+        "items": [
+            {
+                "teamId": str(r["team_id"]),
+                "team": r["team_name"],
+                "teamLogo": team_logo_url(r["api_football_id"]),
+                "played": int(r["played"]),
+                "won": int(r["won"]),
+                "drawn": int(r["drawn"]),
+                "lost": int(r["lost"]),
+                "goalsFor": int(r["goals_for"]),
+                "goalsAgainst": int(r["goals_against"]),
+                "goalDiff": int(r["goals_for"]) - int(r["goals_against"]),
+                "points": int(r["points"]),
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/competitions/{competition_id}/clean-sheets")
+def competition_clean_sheets(competition_id: str, limit: int = Query(20, ge=1, le=50)):
+    """Porterías a cero por equipo (partidos terminados de la temporada
+    actual en los que el rival no marcó). A nivel de equipo, no de portero
+    concreto: no tenemos datos de alineación por partido para saber qué
+    portero jugó cada uno."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM season WHERE competition_id = %s ORDER BY is_current DESC, year_start DESC LIMIT 1",
+                (competition_id,),
+            )
+            season_row = cur.fetchone()
+            if not season_row:
+                return {"items": []}
+            cur.execute(
+                """
+                WITH team_matches AS (
+                  SELECT m.home_team_id AS team_id, m.away_score AS conceded
+                  FROM match m WHERE m.season_id = %(season_id)s AND m.status = 'finished'
+                  UNION ALL
+                  SELECT m.away_team_id AS team_id, m.home_score AS conceded
+                  FROM match m WHERE m.season_id = %(season_id)s AND m.status = 'finished'
+                )
+                SELECT
+                  t.id AS team_id, t.name_default AS team_name, t.api_football_id,
+                  COUNT(*) FILTER (WHERE tm.conceded = 0) AS clean_sheets
+                FROM team_matches tm
+                JOIN team t ON t.id = tm.team_id
+                GROUP BY t.id, t.name_default, t.api_football_id
+                HAVING COUNT(*) FILTER (WHERE tm.conceded = 0) > 0
+                ORDER BY clean_sheets DESC, t.name_default
+                LIMIT %(limit)s
+                """,
+                {"season_id": season_row["id"], "limit": limit},
+            )
+            rows = cur.fetchall()
+    return {
+        "items": [
+            {
+                "teamId": str(r["team_id"]),
+                "team": r["team_name"],
+                "teamLogo": team_logo_url(r["api_football_id"]),
+                "cleanSheets": int(r["clean_sheets"]),
+            }
+            for r in rows
+        ]
+    }
+
+
 @app.get("/api/teams/{team_id}/transfers")
 def team_transfers(team_id: str, limit: int = Query(30, ge=1, le=100)):
     """Fichajes in/out de un club (vacío hasta cargar TRANSFER)."""
@@ -1134,6 +1256,7 @@ def transfers(
     offset: int = Query(0, ge=0),
     type: str | None = Query(None, description="permanent | loan | loan_end | free | end_of_contract | academy_promotion | unknown"),
     league: str | None = Query(None, description="premier | laliga | seriea | bundesliga | ligue1"),
+    sort: str | None = Query(None, description="fee (importe más alto primero) | nada = más recientes primero"),
 ):
     """Fichajes desde TRANSFER, con paginación y filtro opcional por tipo y liga
     (liga = liga de destino del jugador, en la temporada más reciente)."""
@@ -1183,7 +1306,7 @@ def transfers(
                 LEFT JOIN team tf ON tf.id = t.from_team_id
                 LEFT JOIN team tt ON tt.id = t.to_team_id
                 {where}
-                ORDER BY t.effective_date DESC NULLS LAST, t.created_at DESC
+                ORDER BY {"t.fee_amount DESC NULLS LAST" if sort == "fee" else "t.effective_date DESC NULLS LAST, t.created_at DESC"}
                 LIMIT %s OFFSET %s
                 """,
                 params + [limit, offset],

@@ -2868,6 +2868,27 @@ function competitionDetailHTML(comp) {
           <div><b>${season}</b><span>Temporada</span></div>
         </div>
       </header>
+
+      <div class="comp-detail__section">
+        <h2>Clasificación</h2>
+        <div id="comp-standings"><p class="empty-note">Cargando…</p></div>
+      </div>
+
+      <div style="display:grid;gap:20px;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));align-items:start;margin-top:20px">
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head"><h3>Máximos goleadores</h3></div>
+          <div id="comp-scorers"><p class="empty-note" style="padding:16px">Cargando…</p></div>
+        </div>
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head"><h3>Máximos asistentes</h3></div>
+          <div id="comp-assists"><p class="empty-note" style="padding:16px">Cargando…</p></div>
+        </div>
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head"><h3>Porterías a cero</h3></div>
+          <div id="comp-cleansheets"><p class="empty-note" style="padding:16px">Cargando…</p></div>
+        </div>
+      </div>
+
       <div class="comp-detail__section">
         <h2>Equipos</h2>
         ${list}
@@ -2975,6 +2996,94 @@ async function initCompetitionDetailPage() {
   document.title = `${comp.name} | IFLXI`;
   root.innerHTML = competitionDetailHTML(comp);
   observeReveals();
+  loadCompetitionStats(id);
+}
+
+function standingsTableHTML(items) {
+  if (!items.length) return `<p class="empty-note">Sin partidos terminados todavía para calcular la clasificación.</p>`;
+  const rows = items.map((r, i) => `
+    <tr data-href="club.html?id=${r.teamId}">
+      <td>${i + 1}</td>
+      <td class="td-club">
+        <span class="club-only" title="${r.team}">${clubBadgeHTML(r.team, r.teamLogo)}</span> ${r.team}
+      </td>
+      <td class="th-center">${r.played}</td>
+      <td class="th-center">${r.won}</td>
+      <td class="th-center">${r.drawn}</td>
+      <td class="th-center">${r.lost}</td>
+      <td class="th-center">${r.goalsFor}:${r.goalsAgainst}</td>
+      <td class="th-center">${r.goalDiff > 0 ? "+" : ""}${r.goalDiff}</td>
+      <td class="th-center"><b>${r.points}</b></td>
+    </tr>`).join("");
+  return `
+    <div class="table-wrap">
+      <table class="data data--tm">
+        <thead>
+          <tr>
+            <th>#</th><th>Club</th><th class="th-center">PJ</th><th class="th-center">G</th>
+            <th class="th-center">E</th><th class="th-center">P</th><th class="th-center">GF:GC</th>
+            <th class="th-center">DG</th><th class="th-center">Pts</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function statRankListHTML(items, valueKey, valueLabel) {
+  if (!items.length) return `<p class="empty-note" style="padding:16px">Sin datos todavía.</p>`;
+  return `
+    <div class="table-wrap">
+      <table class="data data--tm">
+        <tbody>
+          ${items.map((r, i) => `
+            <tr data-href="jugador.html?id=${r.playerId}">
+              <td style="width:24px;color:var(--muted)">${i + 1}</td>
+              <td><b class="tm-link">${r.player}</b></td>
+              <td class="th-center" style="width:60px"><b>${r[valueKey]}</b> <small style="color:var(--muted)">${valueLabel}</small></td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function cleanSheetsListHTML(items) {
+  if (!items.length) return `<p class="empty-note" style="padding:16px">Sin datos todavía.</p>`;
+  return `
+    <div class="table-wrap">
+      <table class="data data--tm">
+        <tbody>
+          ${items.map((r, i) => `
+            <tr data-href="club.html?id=${r.teamId}">
+              <td style="width:24px;color:var(--muted)">${i + 1}</td>
+              <td class="td-club">
+                <span class="club-only" title="${r.team}">${clubBadgeHTML(r.team, r.teamLogo)}</span> ${r.team}
+              </td>
+              <td class="th-center" style="width:40px"><b>${r.cleanSheets}</b></td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function loadCompetitionStats(id) {
+  const standingsHost = $("#comp-standings");
+  const scorersHost = $("#comp-scorers");
+  const assistsHost = $("#comp-assists");
+  const cleanSheetsHost = $("#comp-cleansheets");
+
+  const [standings, scorers, assists, cleanSheets] = await Promise.all([
+    jget(`/api/competitions/${encodeURIComponent(id)}/standings`).catch(() => ({ items: [] })),
+    jget(`/api/competitions/${encodeURIComponent(id)}/top-scorers?limit=10`).catch(() => ({ items: [] })),
+    jget(`/api/competitions/${encodeURIComponent(id)}/top-assists?limit=10`).catch(() => ({ items: [] })),
+    jget(`/api/competitions/${encodeURIComponent(id)}/clean-sheets?limit=10`).catch(() => ({ items: [] })),
+  ]);
+
+  if (standingsHost) standingsHost.innerHTML = standingsTableHTML(standings?.items || []);
+  if (scorersHost) scorersHost.innerHTML = statRankListHTML(scorers?.items || [], "goals", "goles");
+  if (assistsHost) assistsHost.innerHTML = statRankListHTML(assists?.items || [], "assists", "asist.");
+  if (cleanSheetsHost) cleanSheetsHost.innerHTML = cleanSheetsListHTML(cleanSheets?.items || []);
+  initRowLinks(document);
 }
 
 function posToLine(pos) {
@@ -3844,7 +3953,13 @@ function applyTranslations() {
     el.setAttribute("placeholder", t(el.dataset.i18nPlaceholder));
   });
   const flagBtn = $("#lang-toggle");
-  if (flagBtn) flagBtn.textContent = lang === "en" ? "🇪🇸" : "🇬🇧";
+  if (flagBtn) {
+    // Antes usábamos el emoji de bandera (🇪🇸/🇬🇧) — en Windows a veces no se
+    // dibuja como bandera y aparece como texto "ES"/"GB". Usamos una imagen
+    // de bandera real, que se ve igual en cualquier sistema.
+    const code = lang === "en" ? "es" : "gb";
+    flagBtn.innerHTML = `<img src="https://flagcdn.com/24x18/${code}.png" alt="" width="20" height="15" style="display:block;border-radius:2px" onerror="this.onerror=null;this.replaceWith(document.createTextNode('${code.toUpperCase()}'))">`;
+  }
 }
 
 function setLang(lang) {
