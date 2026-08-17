@@ -11,6 +11,7 @@
 
 "use strict";
 
+
 /* ==========================================================================
    1. DATA — capa de datos simulada
    ========================================================================== */
@@ -869,11 +870,11 @@ const apiLive = {
     try {
       const data = await jget(`/api/transfers?limit=${limit}`);
       const list = Array.isArray(data) ? data : data?.items;
-      if (Array.isArray(list) && list.length) return list;
+      return Array.isArray(list) ? list : [];
     } catch {
-      /* vacío o API caída */
+      /* API caída de verdad → sin datos, no inventamos fichajes */
+      return [];
     }
-    return TRANSFERS.slice(0, limit);
   },
 
   getRumors: async (limit = 6) => RUMORS.slice(0, limit),
@@ -882,17 +883,18 @@ const apiLive = {
     const params = new URLSearchParams();
     if (options.status) params.set("status", options.status);
     if (options.limit) params.set("limit", options.limit);
+    if (options.from) params.set("from", options.from);
+    if (options.to) params.set("to", options.to);
     const qs = params.toString();
     try {
       const list = await jget(`/api/matches${qs ? `?${qs}` : ""}`);
-      if (Array.isArray(list) && list.length) return list;
+      // Lista vacía de verdad (no hay partidos ahora mismo) es un resultado
+      // válido y honesto — no lo sustituimos por partidos de mentira.
+      return Array.isArray(list) ? list : [];
     } catch {
-      /* BD vacía o API caída → demo */
+      /* API caída de verdad → sin datos, no inventamos partidos */
+      return [];
     }
-    let list = MATCHES.slice();
-    if (options.status === "live") list = list.filter((m) => m.status === "live");
-    if (options.limit) list = list.slice(0, options.limit);
-    return list;
   },
 
   getMatch: async (id) => {
@@ -916,7 +918,7 @@ const apiLive = {
     try {
       return await jget(`/api/competitions?${params}`);
     } catch {
-      return apiMock.getCompetitions(options);
+      return { items: [], total: 0 };
     }
   },
 
@@ -924,7 +926,7 @@ const apiLive = {
     try {
       return await jget(`/api/competitions/${encodeURIComponent(id)}`);
     } catch {
-      return apiMock.getCompetition(id);
+      return null;
     }
   },
 
@@ -935,15 +937,14 @@ const apiLive = {
   }
 };
 
-const api = new Proxy(apiMock, {
-  get(target, prop) {
-    return async (...args) => {
-      const live = await detectLive();
-      const src = live ? apiLive : apiMock;
-      return src[prop](...args);
-    };
-  }
-});
+// Antes: un Proxy decidía en cada llamada si usar datos reales (apiLive) o
+// de ejemplo (apiMock) según detectLive(). Eso hacía que, si el chequeo de
+// salud fallaba una sola vez (o iba lento), TODA la web cambiara en secreto
+// a datos inventados sin ningún aviso, y se quedaba así el resto de la
+// sesión (el resultado se guardaba en caché). Cada función de apiLive ya
+// gestiona sus propios errores de forma honesta (lista vacía + aviso,
+// nunca datos de mentira), así que usamos siempre apiLive directamente.
+const api = apiLive;
 
 /* ==========================================================================
    3. CORE — utilidades y motor de análisis
@@ -971,11 +972,11 @@ function formatValue(millions, { free = "Libre", empty = "Sin valor" } = {}) {
   return `${nf1.format(millions)} M €`;
 }
 
-/** Coste de fichaje estilo Transfermarkt: Cesión / Libre / 150 mil € / 125,00 mill. € */
+/** Coste de fichaje estilo Transfermarkt: Cesión/Loan · Libre/Free · 150 mil € · 125,00 mill. € */
 function formatTransferCost(transfer) {
   const type = String(transfer.type || "").toLowerCase();
-  if (type === "cesión" || type === "cesion") return "Cesión";
-  if (type === "libre" || transfer.fee === 0) return "Libre";
+  if (type === "cesión" || type === "cesion") return window.t("transfer.loan");
+  if (type === "libre" || transfer.fee === 0) return window.t("transfer.free");
   const fee = transfer.fee;
   if (fee == null || Number.isNaN(fee)) return "—";
   if (fee < 1) {
@@ -1191,15 +1192,15 @@ const ICON_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" 
  * no usa avatarHTML/PLAYERS (que son solo el elenco de ejemplo). */
 function realTransferRowHTML(t) {
   if (!t || !t.player) return "";
-  const from = t.from || "Agente libre";
+  const from = t.from || window.t("transfer.freeAgent");
   const to = t.to || "—";
   let cost;
   let costClass = "fee";
   if (t.type === "loan" || t.type === "loan_end") {
-    cost = "Cesión";
+    cost = window.t("transfer.loan");
     costClass = "fee fee--loan";
   } else if (t.type === "free" || t.type === "end_of_contract" || t.fee === 0) {
-    cost = "Libre";
+    cost = window.t("transfer.free");
     costClass = "fee fee--free";
   } else if (t.fee != null) {
     const millions = t.fee / 1_000_000;
@@ -1244,8 +1245,9 @@ function transferRowHTML(transfer) {
   const player = PLAYERS.find((p) => p.id === transfer.playerId);
   if (!player) return "";
   const cost = formatTransferCost(transfer);
+  const type = String(transfer.type || "").toLowerCase();
   const costClass =
-    cost === "Cesión" ? "fee fee--loan" : cost === "Libre" ? "fee fee--free" : "fee";
+    type === "cesión" || type === "cesion" ? "fee fee--loan" : type === "libre" || transfer.fee === 0 ? "fee fee--free" : "fee";
   const routeTitle = `${transfer.from} → ${transfer.to}`;
   return `
     <tr data-href="jugador.html?id=${player.id}" title="${routeTitle}">
@@ -1270,11 +1272,28 @@ function transferRowHTML(transfer) {
 }
 
 /** Convierte el % de un rumor en una etiqueta de fiabilidad Baja/Media/Alta. */
-function rumorLevelHTML(pct) {
-  if (pct == null) return `<span class="rumor-pct rumor-pct--unk">Sin datos</span>`;
-  if (pct >= 60) return `<span class="rumor-pct rumor-pct--up">Alta</span>`;
-  if (pct >= 35) return `<span class="rumor-pct rumor-pct--flat">Media</span>`;
-  return `<span class="rumor-pct rumor-pct--down">Baja</span>`;
+function rumorLevelHTML(value) {
+  // Datos reales (admin): texto "baja"/"media"/"alta". Datos demo: número (%).
+  let level;
+  if (typeof value === "string") {
+    level = value.toLowerCase();
+  } else if (value == null) {
+    level = null;
+  } else if (value >= 60) {
+    level = "alta";
+  } else if (value >= 35) {
+    level = "media";
+  } else {
+    level = "baja";
+  }
+  const labels = {
+    alta: ["rumor-pct--up", "Alta", "High"],
+    media: ["rumor-pct--flat", "Media", "Medium"],
+    baja: ["rumor-pct--down", "Baja", "Low"],
+  };
+  if (!labels[level]) return `<span class="rumor-pct rumor-pct--unk">${t("rumor.noData")}</span>`;
+  const [cls, es, en] = labels[level];
+  return `<span class="rumor-pct ${cls}">${currentLang() === "en" ? en : es}</span>`;
 }
 
 function rumorRowHTML(rumor) {
@@ -1353,8 +1372,9 @@ function topTransferRowHTML(transfer) {
   const player = PLAYERS.find((p) => p.id === transfer.playerId);
   if (!player) return "";
   const cost = formatTransferCost(transfer);
+  const type = String(transfer.type || "").toLowerCase();
   const costClass =
-    cost === "Cesión" ? "fee fee--loan" : cost === "Libre" ? "fee fee--free" : "fee";
+    type === "cesión" || type === "cesion" ? "fee fee--loan" : type === "libre" || transfer.fee === 0 ? "fee fee--free" : "fee";
   return `
     <tr data-href="jugador.html?id=${player.id}">
       <td>
@@ -1412,7 +1432,7 @@ function matchCardHTML(match) {
   const badge = isLive
     ? `<span class="match-card__live"><span class="dot"></span> ${match.minute ?? "—"}'</span>`
     : isDone
-      ? `<span class="tag">Final</span>`
+      ? `<span class="tag">${t("matches.final")}</span>`
       : `<span class="tag">${match.kickoff || "—"}</span>`;
   const href = `partido.html?id=${encodeURIComponent(match.id)}`;
   return `
@@ -1442,7 +1462,7 @@ function matchRowHTML(match) {
   const statusBit = isLive
     ? `<span class="match-row__live"><span class="dot"></span>${match.minute ?? "—"}'</span>`
     : isDone
-      ? `<span class="match-row__final">Final</span>`
+      ? `<span class="match-row__final">${t("matches.final")}</span>`
       : `<span class="match-row__kick">${match.kickoff || "—"}</span>`;
   const score =
     match.homeScore != null
@@ -2423,11 +2443,10 @@ function initAuth() {
 }
 
 async function initHome() {
-  const [topLive, transfers, rumors, liveMatches] = await Promise.all([
+  const [topLive, transfers, liveMatches] = await Promise.all([
     api.getPlayers({ sort: "value", limit: 10 }).catch(() => []),
-    api.getTransfers(8).catch(() => TRANSFERS.slice(0, 8)),
-    api.getRumors(6).catch(() => RUMORS.slice(0, 6)),
-    api.getMatches({ status: "live", limit: 6 }).catch(() => MATCHES.filter((m) => m.status === "live")),
+    api.getTransfers(8).catch(() => []),
+    api.getMatches({ status: "live", limit: 6 }).catch(() => []),
   ]);
 
   const top10 = (topLive?.length ? topLive : PLAYERS.slice())
@@ -2435,15 +2454,15 @@ async function initHome() {
     .sort((a, b) => (b.value || 0) - (a.value || 0))
     .slice(0, 10);
 
-  // Panel home: fichajes reales de la API (con reserva a demo si la API
-  // aún no responde, gestionada dentro de api.getTransfers).
+  // Panel home: solo fichajes reales de la API. Si está vacía de verdad
+  // (o la API no responde), mostramos un aviso honesto, nunca datos de mentira.
   const usingRealTransfers = Array.isArray(transfers) && transfers.length && transfers[0]?.player;
   const transfersBody = $("#transfers-body");
   if (transfersBody) {
     const rows = usingRealTransfers
       ? transfers.slice(0, 5).map(realTransferRowHTML).filter(Boolean).join("")
-      : TRANSFERS.slice(0, 5).map(transferRowHTML).filter(Boolean).join("");
-    transfersBody.innerHTML = rows || `<tr><td colspan="3">Sin fichajes para mostrar.</td></tr>`;
+      : "";
+    transfersBody.innerHTML = rows || `<tr><td colspan="3" class="empty-note">${t("fichajes.none")}</td></tr>`;
   }
 
   // Rumores reales del panel de admin; si no hay ninguno, aviso honesto.
@@ -2458,14 +2477,14 @@ async function initHome() {
     rumorsBody.innerHTML =
       Array.isArray(realRumors) && realRumors.length
         ? realRumors.map(realRumorRowHTML).join("")
-        : `<tr><td colspan="3" class="empty-note">Próximamente: rumores de fichajes basados en datos reales.</td></tr>`;
+        : `<tr><td colspan="3" class="empty-note">${t("home.rumors.soon")}</td></tr>`;
   }
 
   const liveHost = $("#live-matches");
   if (liveHost) {
-    const list = liveMatches?.length ? liveMatches : MATCHES.filter((m) => m.status === "live");
+    const list = liveMatches || [];
     if (!list.length) {
-      liveHost.innerHTML = `<p class="empty-note">No hay partidos en directo ahora. <a href="partidos.html">Ver todos los del día</a>.</p>`;
+      liveHost.innerHTML = `<p class="empty-note">${t("home.live.none")} <a href="partidos.html">${t("home.live.viewAllShort")}</a>.</p>`;
     } else {
       const byLeague = new Map();
       for (const m of list) {
@@ -2490,15 +2509,22 @@ async function initHome() {
     }
     topValueBody.innerHTML = topValued.length
       ? topValued.map(realTopValuedRowHTML).join("")
-      : `<tr><td colspan="3" class="empty-note">Próximamente: ranking real en cuanto carguemos valores de mercado.</td></tr>`;
+      : `<tr><td colspan="3" class="empty-note">${t("home.market.soon")}</td></tr>`;
   }
 
   const topTransfersBody = $("#top-transfers-body");
   if (topTransfersBody) {
-    const topSummer = TRANSFERS.slice()
-      .sort((a, b) => (b.fee || 0) - (a.fee || 0))
-      .slice(0, 5);
-    topTransfersBody.innerHTML = topSummer.map(topTransferRowHTML).filter(Boolean).join("");
+    let topFee = [];
+    try {
+      const data = await jget("/api/transfers?sort=fee&limit=5");
+      const list = Array.isArray(data) ? data : data?.items || [];
+      topFee = list.filter((x) => x.fee != null);
+    } catch {
+      /* API caída o vacía */
+    }
+    topTransfersBody.innerHTML = topFee.length
+      ? topFee.map(realTransferRowHTML).filter(Boolean).join("")
+      : `<tr><td colspan="3" class="empty-note">${t("fichajes.none")}</td></tr>`;
   }
 
   initNewsRail();
@@ -2562,20 +2588,34 @@ async function initFichajesPage() {
   const filters = $("#fichajes-filters");
   if (!body) return;
 
-  const state = { type: "", offset: 0, limit: 30, total: 0 };
+  const state = {
+    type: "",
+    league: new URLSearchParams(location.search).get("league") || "",
+    offset: 0,
+    limit: 30,
+    total: 0,
+  };
+
+  const leagueNote = $("#fichajes-league-note");
+  if (leagueNote && state.league) {
+    const leagueName = t(`league.${state.league}`);
+    leagueNote.textContent = `${t("fichajes.filteredBy")} ${leagueName}.`;
+    leagueNote.style.display = "";
+  }
 
   const fetchPage = async (reset) => {
     if (reset) {
       state.offset = 0;
-      body.innerHTML = `<tr><td colspan="3">Cargando…</td></tr>`;
+      body.innerHTML = `<tr><td colspan="3">${t("common.loading")}</td></tr>`;
     }
     const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
     if (state.type) params.set("type", state.type);
+    if (state.league) params.set("league", state.league);
     let data;
     try {
       data = await jget(`/api/transfers?${params}`);
     } catch {
-      body.innerHTML = `<tr><td colspan="3">No se pudieron cargar los fichajes ahora mismo.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="3">${t("fichajes.loadError")}</td></tr>`;
       return;
     }
     const items = Array.isArray(data) ? data : data?.items || [];
@@ -2583,8 +2623,8 @@ async function initFichajesPage() {
 
     const rows = items.map(realTransferRowHTML).filter(Boolean).join("");
     body.innerHTML = reset
-      ? rows || `<tr><td colspan="3">Sin fichajes para este filtro.</td></tr>`
-      : (body.innerHTML.includes("Cargando") ? "" : body.innerHTML) + rows;
+      ? rows || `<tr><td colspan="3">${t("fichajes.none")}</td></tr>`
+      : (body.innerHTML.includes(t("common.loading")) ? "" : body.innerHTML) + rows;
 
     state.offset += items.length;
     if (countEl) countEl.textContent = `${nf0.format(state.offset)} de ${nf0.format(state.total)}`;
@@ -2611,20 +2651,59 @@ async function initFichajesPage() {
 async function initMatchesPage() {
   const host = $("#day-matches");
   const dateEl = $("#matches-date");
-  if (dateEl) {
-    dateEl.textContent = new Intl.DateTimeFormat("es-ES", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date());
-  }
+  const dayBar = $("#matches-daybar");
+  const lang = currentLang() === "en" ? "en-GB" : "es-ES";
 
-  const matches = await api.getMatches().catch(() => MATCHES);
-  const order = { live: 0, scheduled: 1, finished: 2 };
-  const all = (matches?.length ? matches : MATCHES)
-    .slice()
-    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  const toISO = (d) => d.toISOString().slice(0, 10);
+  const todayISO = toISO(new Date());
+  let selected = new URLSearchParams(location.search).get("date") || todayISO;
+
+  const setDate = (iso) => {
+    selected = iso;
+    const url = new URL(location.href);
+    if (iso === todayISO) url.searchParams.delete("date");
+    else url.searchParams.set("date", iso);
+    history.replaceState(null, "", url);
+    loadDay();
+  };
+
+  const renderDayBar = () => {
+    if (!dayBar) return;
+    const base = new Date(`${selected}T00:00:00`);
+    const days = [];
+    for (let i = -3; i <= 3; i++) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    const prev = new Date(base); prev.setDate(prev.getDate() - 1);
+    const next = new Date(base); next.setDate(next.getDate() + 1);
+
+    const dayBtn = (d) => {
+      const iso = toISO(d);
+      const isActive = iso === selected;
+      const isToday = iso === todayISO;
+      const weekday = new Intl.DateTimeFormat(lang, { weekday: "short" }).format(d);
+      const dm = new Intl.DateTimeFormat(lang, { day: "2-digit", month: "2-digit" }).format(d);
+      return `
+        <button type="button" class="chip matches-daybar__day${isActive ? " is-active" : ""}" data-date="${iso}"
+                style="flex:0 0 auto;text-align:center;line-height:1.3;${isActive ? "background:var(--text);color:var(--bg);border-color:var(--text)" : ""}">
+          <span style="display:block;font-size:.72rem;text-transform:capitalize;opacity:.75">${isToday ? t("matches.today") : weekday}</span>
+          <span style="display:block;font-weight:700">${dm}</span>
+        </button>`;
+    };
+
+    dayBar.innerHTML = `
+      <button type="button" class="chip" id="daybar-prev" aria-label="Anterior" style="flex:0 0 auto">‹</button>
+      ${days.map(dayBtn).join("")}
+      <button type="button" class="chip" id="daybar-next" aria-label="Siguiente" style="flex:0 0 auto">›</button>`;
+
+    $("#daybar-prev", dayBar).addEventListener("click", () => setDate(toISO(prev)));
+    $("#daybar-next", dayBar).addEventListener("click", () => setDate(toISO(next)));
+    dayBar.querySelectorAll("[data-date]").forEach((btn) => {
+      btn.addEventListener("click", () => setDate(btn.dataset.date));
+    });
+  };
 
   const renderList = (list) => {
     if (!host) return;
@@ -2638,16 +2717,37 @@ async function initMatchesPage() {
     host.classList.remove("live-grid", "live-grid--day");
     host.innerHTML = list.length
       ? [...byLeague.entries()].map(([league, l]) => matchLeagueBlockHTML(league, l)).join("")
-      : `<p class="empty-note">Sin partidos para este filtro.</p>`;
+      : `<p class="empty-note">${t("matches.none")}</p>`;
     observeReveals();
   };
 
-  renderList(all);
+  const applyStatusFilter = (all, status) => (status ? all.filter((m) => m.status === status) : all);
 
-  const liveCount = $("#live-count");
-  if (liveCount) {
-    liveCount.textContent = String(all.filter((m) => m.status === "live").length);
-  }
+  let allDayMatches = [];
+  let activeStatus = "";
+
+  const loadDay = async () => {
+    if (dateEl) {
+      const d = new Date(`${selected}T00:00:00`);
+      dateEl.textContent = new Intl.DateTimeFormat(lang, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(d);
+    }
+    renderDayBar();
+    if (host) host.innerHTML = `<p class="empty-note">${t("common.loading")}</p>`;
+
+    const order = { live: 0, scheduled: 1, finished: 2 };
+    const matches = await api.getMatches({ from: selected, to: selected, limit: 100 }).catch(() => []);
+    allDayMatches = (matches || []).slice().sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+
+    renderList(applyStatusFilter(allDayMatches, activeStatus));
+
+    const liveCount = $("#live-count");
+    if (liveCount) liveCount.textContent = String(allDayMatches.filter((m) => m.status === "live").length);
+  };
 
   const filters = $("#matches-filters");
   if (filters) {
@@ -2667,10 +2767,12 @@ async function initMatchesPage() {
       const btn = e.target.closest(".chip");
       if (!btn) return;
       setActive(btn);
-      const status = btn.dataset.status;
-      renderList(status ? all.filter((m) => m.status === status) : all);
+      activeStatus = btn.dataset.status;
+      renderList(applyStatusFilter(allDayMatches, activeStatus));
     });
   }
+
+  loadDay();
 }
 
 async function initMatchDetailPage() {
@@ -3497,8 +3599,286 @@ async function initComparator() {
    Arranque
    ========================================================================== */
 
+/* ==========================================================================
+   Idioma (inglés por defecto, con bandera para cambiar a español)
+   ========================================================================== */
+
+const I18N = {
+  en: {
+    "nav.discover": "Discover",
+    "nav.transfers": "Transfers & Rumors",
+    "nav.market": "Market Values",
+    "nav.live": "Live",
+    "nav.competitions": "Competitions",
+    "nav.matches": "Matches",
+    "nav.compare": "Compare",
+    "nav.account": "Account",
+    "header.search": "Search player, club or league…",
+    "header.login": "Log in",
+    "header.signup": "Sign up",
+    "header.live": "LIVE",
+    "footer.home": "Home",
+    "common.loading": "Loading…",
+    "common.seeAll": "See all",
+    "common.back": "Back",
+    "common.backHome": "← Back to home",
+    "home.eyebrow.market": "Market",
+    "home.transfers.title": "Latest Transfers",
+    "home.rumors.title": "Current Rumors",
+    "home.rumors.player": "Player/Club",
+    "home.rumors.interested": "Interested",
+    "home.rumors.soon": "Coming soon: transfer rumors based on real data.",
+    "home.rumors.factory": "Go to the rumor factory →",
+    "home.col.playerpos": "Player/Position",
+    "home.col.fromto": "From → To",
+    "home.col.cost": "Cost",
+    "home.col.club": "Club",
+    "home.col.value": "Market value",
+    "home.transfers.all": "All transfers →",
+    "home.recommendations": "Recommendations",
+    "home.market.title": "Best of the market",
+    "home.market.sub": "The most expensive transfers of summer and the best-valued players in IFLXI.",
+    "home.market.summer": "Top summer transfers",
+    "home.market.mostValuable": "Most valuable players",
+    "home.market.soon": "Coming soon: real ranking once we load market values.",
+    "home.market.openCompare": "Open comparator",
+    "home.market.summerAll": "All summer transfers →",
+    "home.market.best100": "See top 100 →",
+    "home.live.title": "Live matches",
+    "home.live.sub": "What's happening right now.",
+    "home.live.viewAll": "View all today's matches",
+    "home.live.none": "No live matches right now.",
+    "home.live.viewAllShort": "See all of today's",
+    "home.news.title": "News",
+    "home.news.latest": "Latest",
+    "fichajes.title": "Transfers & Rumors",
+    "fichajes.sub": "Every real move: permanent transfers, loans and free arrivals.",
+    "fichajes.all": "All",
+    "fichajes.permanent": "Permanent",
+    "fichajes.loans": "Loans",
+    "fichajes.free": "Free",
+    "fichajes.loadMore": "Load more",
+    "fichajes.loadError": "Couldn't load transfers right now.",
+    "fichajes.none": "No transfers for this filter.",
+    "mercado.title": "Market Values",
+    "mercado.sub": "Ranking of players by market value.",
+    "mercado.soonTitle": "Coming soon",
+    "mercado.soonBody": "We don't have real market values loaded yet — API-Football doesn't provide this figure, so it needs to be loaded from another source before we can show a real ranking. It will appear here once available.",
+    "mercado.seeTransfers": "See real transfers →",
+    "matches.title": "Today's matches",
+    "matches.results": "Results",
+    "matches.today": "Today",
+    "matches.live": "live",
+    "matches.filter.all": "All",
+    "matches.filter.live": "Live",
+    "matches.filter.finished": "Finished",
+    "matches.filter.upcoming": "Upcoming",
+    "matches.none": "No matches for this filter.",
+    "matches.final": "Final",
+    "competitions.title": "Competitions",
+    "compare.title": "Player comparator",
+    "compare.eyebrow": "AI comparator",
+    "compare.duel": "Player duel",
+    "compare.desc": "Pick two players and the model compares their performance, market value and outlook attribute by attribute.",
+    "compare.swap": "Swap",
+    "compare.random": "Random duel",
+    "compare.headtohead": "Head-to-head",
+    "compare.season": "2025/26 season",
+    "compare.attrProfile": "Attribute profile",
+    "compare.analysis": "Model analysis",
+    "compare.autoGenerated": "Auto-generated",
+    "cuenta.title": "Account",
+    "cuenta.eyebrow": "IFLXI access",
+    "cuenta.heading": "Create your Lab account",
+    "cuenta.desc": "Save favourites, follow radiographies and get alerts when your clubs make a move.",
+    "cuenta.perk1": "Player watchlist",
+    "cuenta.perk2": "Squad alerts",
+    "cuenta.perk3": "Arena duel history",
+    "cuenta.register": "Sign up",
+    "nav.transfersShort": "Transfers",
+    "nav.liveShort": "Live",
+    "nav.marketShort": "Market",
+    "nav.players": "Players",
+    "nav.platform": "Platform",
+    "transfer.loan": "Loan",
+    "transfer.free": "Free",
+    "transfer.freeAgent": "Free agent",
+    "rumor.noData": "No data",
+    "fichajes.sectionTitle": "Transfers",
+    "fichajes.recommendations": "Recommended",
+    "fichajes.filteredBy": "Showing transfers to",
+    "league.premier": "Premier League",
+    "league.laliga": "LaLiga",
+    "league.seriea": "Serie A",
+    "league.bundesliga": "Bundesliga",
+    "league.ligue1": "Ligue 1",
+  },
+  es: {
+    "nav.discover": "Descubre",
+    "nav.transfers": "Fichajes y rumores",
+    "nav.market": "Valores de mercado",
+    "nav.live": "En directo",
+    "nav.competitions": "Competiciones",
+    "nav.matches": "Partidos",
+    "nav.compare": "Comparador",
+    "nav.account": "Cuenta",
+    "header.search": "Buscar jugador, club o liga…",
+    "header.login": "Entrar",
+    "header.signup": "Iniciar sesión",
+    "header.live": "EN VIVO",
+    "footer.home": "Inicio",
+    "common.loading": "Cargando…",
+    "common.seeAll": "Ver todos",
+    "common.back": "Volver",
+    "common.backHome": "← Volver al inicio",
+    "home.eyebrow.market": "Mercado",
+    "home.transfers.title": "Últimos fichajes",
+    "home.rumors.title": "Rumores actuales",
+    "home.rumors.player": "Jugador/Club",
+    "home.rumors.interested": "Interesado",
+    "home.rumors.soon": "Próximamente: rumores de fichajes basados en datos reales.",
+    "home.rumors.factory": "Ir a la fábrica de rumores →",
+    "home.col.playerpos": "Jugador/Posición",
+    "home.col.fromto": "De → A",
+    "home.col.cost": "Coste",
+    "home.col.club": "Club",
+    "home.col.value": "Valor de mercado",
+    "home.transfers.all": "Todos los fichajes →",
+    "home.recommendations": "Recomendaciones",
+    "home.market.title": "Lo mejor del mercado",
+    "home.market.sub": "Los fichajes más caros del verano y los jugadores mejor valorados en IFLXI.",
+    "home.market.summer": "Fichajes top de verano",
+    "home.market.mostValuable": "Jugadores más valiosos",
+    "home.market.soon": "Próximamente: ranking real en cuanto carguemos valores de mercado.",
+    "home.market.openCompare": "Abrir comparador",
+    "home.market.summerAll": "Todos los fichajes del verano →",
+    "home.market.best100": "Ver mejores 100 →",
+    "home.live.title": "Partidos en directo",
+    "home.live.sub": "Lo que se está jugando ahora mismo.",
+    "home.live.viewAll": "Ver todos los partidos del día",
+    "home.live.none": "No hay partidos en directo ahora.",
+    "home.live.viewAllShort": "Ver todos los del día",
+    "home.news.title": "Noticias",
+    "home.news.latest": "Última hora",
+    "fichajes.title": "Fichajes y rumores",
+    "fichajes.sub": "Todos los movimientos reales: traspasos, cesiones y llegadas libres.",
+    "fichajes.all": "Todos",
+    "fichajes.permanent": "Traspasos",
+    "fichajes.loans": "Cesiones",
+    "fichajes.free": "Libres",
+    "fichajes.loadMore": "Cargar más",
+    "fichajes.loadError": "No se pudieron cargar los fichajes ahora mismo.",
+    "fichajes.none": "Sin fichajes para este filtro.",
+    "mercado.title": "Valores de mercado",
+    "mercado.sub": "Ranking de jugadores por valor de mercado.",
+    "mercado.soonTitle": "Próximamente",
+    "mercado.soonBody": "Todavía no tenemos valores de mercado reales cargados — API-Football no proporciona esta cifra, así que hace falta cargarla de otra fuente antes de poder mostrar un ranking real. En cuanto esté disponible, aparecerá aquí.",
+    "mercado.seeTransfers": "Ver fichajes reales →",
+    "matches.title": "Partidos del día",
+    "matches.results": "Resultados",
+    "matches.today": "Hoy",
+    "matches.live": "en directo",
+    "matches.filter.all": "Todos",
+    "matches.filter.live": "En vivo",
+    "matches.filter.finished": "Terminado",
+    "matches.filter.upcoming": "Próximamente",
+    "matches.none": "Sin partidos para este filtro.",
+    "matches.final": "Final",
+    "competitions.title": "Competiciones",
+    "compare.title": "Comparador de jugadores",
+    "compare.eyebrow": "Comparador IA",
+    "compare.duel": "Duelo de jugadores",
+    "compare.desc": "Elige dos futbolistas y el modelo enfrenta su rendimiento, valor de mercado y proyección atributo a atributo.",
+    "compare.swap": "Intercambiar",
+    "compare.random": "Duelo aleatorio",
+    "compare.headtohead": "Comparativa directa",
+    "compare.season": "Temporada 2025/26",
+    "compare.attrProfile": "Perfil de atributos",
+    "compare.analysis": "Análisis del modelo",
+    "compare.autoGenerated": "Generado automáticamente",
+    "cuenta.title": "Cuenta",
+    "cuenta.eyebrow": "Acceso IFLXI",
+    "cuenta.heading": "Crea tu cuenta Lab",
+    "cuenta.desc": "Guarda favoritos, sigue radiografías y recibe alertas cuando haya movimiento en tus clubes.",
+    "cuenta.perk1": "Watchlist de jugadores",
+    "cuenta.perk2": "Alertas de plantilla",
+    "cuenta.perk3": "Historial de duelos Arena",
+    "rumor.noData": "Sin datos",
+    "fichajes.sectionTitle": "Fichajes",
+    "fichajes.recommendations": "Recomendaciones",
+    "fichajes.filteredBy": "Mostrando fichajes hacia",
+    "league.premier": "Premier League",
+    "league.laliga": "LaLiga",
+    "league.seriea": "Serie A",
+    "league.bundesliga": "Bundesliga",
+    "league.ligue1": "Ligue 1",
+    "cuenta.register": "Registro",
+    "nav.transfersShort": "Fichajes",
+    "nav.liveShort": "Directo",
+    "nav.marketShort": "Mercado",
+    "nav.players": "Jugadores",
+    "nav.platform": "Plataforma",
+  },
+};
+
+function currentLang() {
+  try {
+    return localStorage.getItem("iflxi-lang") || "en";
+  } catch {
+    return "en";
+  }
+}
+
+function t(key) {
+  const lang = currentLang();
+  return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+}
+
+function applyTranslations() {
+  const lang = currentLang();
+  document.documentElement.setAttribute("lang", lang);
+  $$("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  $$("[data-i18n-placeholder]").forEach((el) => {
+    el.setAttribute("placeholder", t(el.dataset.i18nPlaceholder));
+  });
+  const flagBtn = $("#lang-toggle");
+  if (flagBtn) flagBtn.textContent = lang === "en" ? "🇪🇸" : "🇬🇧";
+}
+
+function setLang(lang) {
+  try {
+    localStorage.setItem("iflxi-lang", lang);
+  } catch {}
+  applyTranslations();
+  document.dispatchEvent(new CustomEvent("iflxi-lang-changed"));
+}
+
+function initLanguage() {
+  // Inserta el selector de bandera en la cabecera sin tener que tocar
+  // el HTML de cada página (la cabecera se repite en las 11 páginas).
+  const actions = $(".header__actions");
+  if (actions && !$("#lang-toggle")) {
+    const btn = document.createElement("button");
+    btn.id = "lang-toggle";
+    btn.type = "button";
+    btn.className = "theme-toggle";
+    btn.title = "Español / English";
+    btn.style.fontSize = "1.1rem";
+    btn.addEventListener("click", () => {
+      setLang(currentLang() === "en" ? "es" : "en");
+    });
+    const themeBtn = $(".theme-toggle", actions);
+    if (themeBtn) themeBtn.after(btn);
+    else actions.prepend(btn);
+  }
+  applyTranslations();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
+  initLanguage();
   initHeader();
   initSearch();
 
