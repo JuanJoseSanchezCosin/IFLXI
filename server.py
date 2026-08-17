@@ -1119,18 +1119,41 @@ def search(q: str = Query("", min_length=1)):
     return {"players": players, "teams": teams, "leagues": leagues}
 
 
+LEAGUE_SLUGS = {
+    "premier": "Premier League",
+    "laliga": "LaLiga",
+    "seriea": "Serie A",
+    "bundesliga": "Bundesliga",
+    "ligue1": "Ligue 1",
+}
+
+
 @app.get("/api/transfers")
 def transfers(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     type: str | None = Query(None, description="permanent | loan | loan_end | free | end_of_contract | academy_promotion | unknown"),
+    league: str | None = Query(None, description="premier | laliga | seriea | bundesliga | ligue1"),
 ):
-    """Fichajes desde TRANSFER, con paginación y filtro opcional por tipo."""
+    """Fichajes desde TRANSFER, con paginación y filtro opcional por tipo y liga
+    (liga = liga de destino del jugador, en la temporada más reciente)."""
     clauses: list[str] = []
     params: list = []
     if type:
         clauses.append("t.transfer_type::text = %s")
         params.append(type)
+    if league and league in LEAGUE_SLUGS:
+        clauses.append(
+            """
+            EXISTS (
+              SELECT 1 FROM team_competition tc
+              JOIN competition comp ON comp.id = tc.competition_id
+              WHERE tc.team_id = t.to_team_id
+                AND comp.name_default = %s
+            )
+            """
+        )
+        params.append(LEAGUE_SLUGS[league])
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
 
     with connect() as conn:
