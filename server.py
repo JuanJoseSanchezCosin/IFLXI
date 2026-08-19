@@ -998,7 +998,7 @@ def get_team(team_id: str):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT t.id, t.name_default, t.code, t.founded_year,
+                SELECT t.id, t.name_default, t.code, t.founded_year, t.api_football_id,
                        c.name_default AS country_name,
                        (
                          SELECT comp.name_default
@@ -1025,6 +1025,7 @@ def get_team(team_id: str):
                 """
                 SELECT
                   p.id AS player_id,
+                  p.api_football_id AS player_api_football_id,
                   per.full_name,
                   per.display_name,
                   per.birth_date,
@@ -1036,6 +1037,7 @@ def get_team(team_id: str):
                   t.id AS team_id,
                   t.name_default AS team_name,
                   t.code AS team_code,
+                  t.api_football_id AS team_api_football_id,
                   ctry.name_default AS country_name,
                   %s AS competition_name,
                   (
@@ -1076,6 +1078,7 @@ def get_team(team_id: str):
             "team_id": team["id"],
             "team_name": team["name_default"],
             "team_code": team["code"],
+            "api_football_id": team["api_football_id"],
             "country_name": team["country_name"],
             "competition_name": team["competition_name"],
         }
@@ -1405,6 +1408,16 @@ def list_competitions(
         ) s ON TRUE
         {where}
         ORDER BY
+          CASE c.name_default
+            WHEN 'Champions League' THEN 0
+            WHEN 'Premier League' THEN 1
+            WHEN 'LaLiga' THEN 2
+            WHEN 'Serie A' THEN 3
+            WHEN 'Bundesliga' THEN 4
+            WHEN 'Ligue 1' THEN 5
+            WHEN 'Europa League' THEN 6
+            ELSE 100
+          END,
           CASE c.competition_type::text WHEN 'league' THEN 0 WHEN 'cup' THEN 1 ELSE 2 END,
           co.name_default NULLS LAST,
           c.name_default
