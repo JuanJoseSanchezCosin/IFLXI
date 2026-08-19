@@ -1406,7 +1406,7 @@ function realRumorRowHTML(r) {
     ? `<span class="club-only" title="${r.interested}">${interestedBadge}</span> ${r.interested}`
     : r.interested;
   return `
-    <tr>
+    <tr data-href="rumor.html?id=${r.id}">
       <td>
         <div class="cell-player">
           <div class="avatar avatar--sm${r.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a" data-fallback="${fallback}">${avatarInner}</div>
@@ -1677,6 +1677,10 @@ function renderValueChart(host, history) {
 /* --- Gráfico radar (comparador) ------------------------------------------ */
 
 function renderRadarChart(host, playerA, playerB) {
+  if (!playerA?.attrs || !playerB?.attrs) {
+    host.innerHTML = `<p class="empty-note" style="padding:20px;text-align:center">Perfil técnico no disponible para estos jugadores.</p>`;
+    return;
+  }
   const size = 340, cx = size / 2, cy = size / 2, radius = 118;
   const keys = Object.keys(ATTR_LABELS);
   const step = (Math.PI * 2) / keys.length;
@@ -2097,16 +2101,17 @@ async function initNewsRail() {
 
   let items = FLASH_NEWS;
   try {
-    const real = await jget("/api/news?limit=8");
+    const real = await jget("/api/news?limit=10");
     if (Array.isArray(real) && real.length) {
       items = real.map((n) => ({
-        slot: n.slot,
+        id: n.id,
         tag: n.tag,
         time: relativeTimeShort(n.createdAt),
         title: n.title,
         excerpt: n.excerpt || "",
         c: NEWS_TAG_COLOR[n.tag] || "#1d2b53",
         image: n.image || null,
+        isFeatured: n.isFeatured,
       }));
     }
   } catch {
@@ -2121,26 +2126,31 @@ async function initNewsRail() {
   }
 
   const clampTitle = 'style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"';
-  const clampExcerpt = 'style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden"';
+  const clampExcerpt = 'style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"';
 
-  grid.innerHTML = items.map((n, i) => {
+  grid.innerHTML = items.map((n) => {
     const thumb = n.image
-      ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:2px">`
+      ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px 8px 0 0">`
       : n.tag;
-    const href = n.slot != null ? `noticia.html?slot=${n.slot}` : "#fichajes";
+    const href = n.id != null ? `noticia.html?id=${n.id}` : "#fichajes";
     return `
-    <a class="tm-news__item${i === 0 ? " tm-news__item--lead" : ""}" href="${href}" style="--c:${n.c}">
-      <div class="tm-news__thumb">${thumb}</div>
-      <div class="tm-news__body">
+    <a class="tm-news__item" href="${href}" style="--c:${n.c};flex:0 0 300px;scroll-snap-align:start;margin-right:16px;display:flex;flex-direction:column;border:1px solid var(--line,#e2e5ea);border-radius:8px;overflow:hidden;background:var(--bg,#fff)${n.isFeatured ? ";outline:2px solid #f5a623" : ""}">
+      <div class="tm-news__thumb" style="aspect-ratio:16/10;margin:0">${thumb}</div>
+      <div class="tm-news__body" style="padding:12px">
         <div class="tm-news__meta">
           <span class="tm-news__cat">${n.tag}</span>
           <span>${n.time}</span>
         </div>
         <h3 class="tm-news__title" ${clampTitle}>${n.title}</h3>
-        ${i === 0 ? `<p class="tm-news__excerpt" ${clampExcerpt}>${n.excerpt}</p>` : ""}
+        <p class="tm-news__excerpt" ${clampExcerpt} style="margin-top:6px">${n.excerpt}</p>
       </div>
     </a>`;
   }).join("");
+
+  const prevBtn = $("#news-slider-prev");
+  const nextBtn = $("#news-slider-next");
+  if (prevBtn) prevBtn.addEventListener("click", () => grid.scrollBy({ left: -320, behavior: "smooth" }));
+  if (nextBtn) nextBtn.addEventListener("click", () => grid.scrollBy({ left: 320, behavior: "smooth" }));
 }
 
 function initArena() {
@@ -2538,15 +2548,16 @@ async function initHome() {
 async function initNoticiaPage() {
   const root = $("#noticia-root");
   if (!root) return;
-  const slot = new URLSearchParams(location.search).get("slot");
+  const id = new URLSearchParams(location.search).get("id");
 
-  let items = [];
-  try {
-    items = await jget("/api/news?limit=10");
-  } catch {
-    /* API caída */
+  let n = null;
+  if (id) {
+    try {
+      n = await jget(`/api/news/${encodeURIComponent(id)}`);
+    } catch {
+      /* no encontrada o API caída */
+    }
   }
-  const n = Array.isArray(items) ? items.find((it) => String(it.slot) === String(slot)) : null;
 
   if (!n) {
     root.innerHTML = `
@@ -2578,7 +2589,169 @@ async function initNoticiaPage() {
     </div>
     <h1 style="margin:0 0 20px;font-size:2rem;line-height:1.2">${n.title}</h1>
     ${paragraphs || `<p class="empty-note">Sin más detalle todavía.</p>`}
-    <p style="margin-top:32px"><a class="btn btn--sm" href="index.html">← Volver al inicio</a></p>`;
+    <p style="margin-top:32px;display:flex;gap:14px">
+      <a class="btn btn--sm" href="index.html">← Volver al inicio</a>
+      <a class="btn btn--sm btn--ghost" href="noticias.html">Ver todas las noticias</a>
+    </p>`;
+}
+
+async function initNoticiasArchivePage() {
+  const host = $("#noticias-list");
+  const moreBtn = $("#noticias-more");
+  if (!host) return;
+  let offset = 0;
+  const limit = 12;
+
+  const loadMore = async () => {
+    let data;
+    try {
+      data = await jget(`/api/news/archive?limit=${limit}&offset=${offset}`);
+    } catch {
+      if (offset === 0) host.innerHTML = `<p class="empty-note">No se pudo cargar el archivo.</p>`;
+      return;
+    }
+    const items = data?.items || [];
+    if (offset === 0 && !items.length) {
+      host.innerHTML = `<p class="empty-note">Todavía no hay noticias publicadas.</p>`;
+      if (moreBtn) moreBtn.style.display = "none";
+      return;
+    }
+    const rows = items.map((n) => {
+      const when = relativeTimeShort(n.createdAt);
+      const thumb = n.image
+        ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
+        : `<div style="width:100%;height:100%;background:${NEWS_TAG_COLOR[n.tag] || "#1d2b53"};border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:.75rem;text-transform:uppercase">${n.tag}</div>`;
+      return `
+        <a href="noticia.html?id=${n.id}" style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--line,#e2e5ea);text-decoration:none;color:inherit">
+          <div style="flex:0 0 120px;aspect-ratio:4/3">${thumb}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+              <span class="tag" style="font-size:.7rem">${n.tag}</span>
+              <span style="color:var(--muted);font-size:.8rem">${when}</span>
+              ${n.isFeatured ? `<span style="color:#f5a623;font-size:.8rem">★ Destacada</span>` : ""}
+            </div>
+            <h3 style="margin:0 0 4px;font-size:1.05rem;line-height:1.3">${n.title}</h3>
+            <p style="margin:0;color:var(--muted);font-size:.9rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${n.excerpt || ""}</p>
+          </div>
+        </a>`;
+    }).join("");
+    host.innerHTML = offset === 0 ? rows : host.innerHTML + rows;
+    offset += items.length;
+    if (moreBtn) moreBtn.style.display = offset < (data?.total || 0) ? "" : "none";
+  };
+
+  if (moreBtn) moreBtn.addEventListener("click", loadMore);
+  loadMore();
+}
+
+async function initRumorPage() {
+  const root = $("#rumor-root");
+  if (!root) return;
+  const id = new URLSearchParams(location.search).get("id");
+
+  let r = null;
+  if (id) {
+    try {
+      r = await jget(`/api/rumors/${encodeURIComponent(id)}`);
+    } catch {
+      /* no encontrado o API caída */
+    }
+  }
+
+  if (!r) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <h2>Rumor no encontrado</h2>
+        <p style="margin:10px 0 20px">Puede que se haya quitado.</p>
+        <a class="btn btn--primary" href="rumores.html">Ver todos los rumores</a>
+      </div>`;
+    return;
+  }
+
+  document.title = `${r.player} → ${r.interested} | IFLXI`;
+  const when = relativeTimeShort(r.createdAt);
+  const fallback = initials(r.player || "?");
+  const avatarInner = r.playerPhoto
+    ? `<img src="${r.playerPhoto}" alt="" style="width:100%;height:100%;object-fit:cover">`
+    : fallback;
+  const playerLink = r.playerId ? `jugador.html?id=${r.playerId}` : null;
+
+  root.innerHTML = `
+    <nav class="breadcrumb" style="margin-bottom:18px">
+      <a href="index.html">Inicio</a> <span>›</span>
+      <a href="rumores.html">Rumores</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+      <div class="avatar avatar--xl${r.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a;width:72px;height:72px;font-size:1.4rem">${avatarInner}</div>
+      <div>
+        <h1 style="margin:0 0 4px;font-size:1.6rem">${playerLink ? `<a href="${playerLink}" style="color:inherit">${r.player}</a>` : r.player}</h1>
+        ${r.club ? `<p style="margin:0;color:var(--muted)">${r.club}</p>` : ""}
+      </div>
+    </div>
+    <div class="panel tm-panel" style="padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="color:var(--muted)">Club interesado</span>
+        <b>${r.interested}</b>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="color:var(--muted)">Fiabilidad</span>
+        ${rumorLevelHTML(r.level)}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="color:var(--muted)">Publicado</span>
+        <span>${when}</span>
+      </div>
+    </div>
+    <p style="margin-top:32px;display:flex;gap:14px">
+      <a class="btn btn--sm" href="index.html">← Volver al inicio</a>
+      <a class="btn btn--sm btn--ghost" href="rumores.html">Ver todos los rumores</a>
+    </p>`;
+}
+
+async function initRumoresArchivePage() {
+  const host = $("#rumores-list");
+  const moreBtn = $("#rumores-more");
+  if (!host) return;
+  let offset = 0;
+  const limit = 15;
+
+  const loadMore = async () => {
+    let data;
+    try {
+      data = await jget(`/api/rumors/archive?limit=${limit}&offset=${offset}`);
+    } catch {
+      if (offset === 0) host.innerHTML = `<p class="empty-note">No se pudo cargar el archivo.</p>`;
+      return;
+    }
+    const items = data?.items || [];
+    if (offset === 0 && !items.length) {
+      host.innerHTML = `<p class="empty-note">Todavía no hay rumores publicados.</p>`;
+      if (moreBtn) moreBtn.style.display = "none";
+      return;
+    }
+    const rows = items.map((r) => {
+      const when = relativeTimeShort(r.createdAt);
+      const fallback = initials(r.player || "?");
+      const avatarInner = r.playerPhoto
+        ? `<img src="${r.playerPhoto}" alt="" style="width:100%;height:100%;object-fit:cover">`
+        : fallback;
+      return `
+        <a href="rumor.html?id=${r.id}" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line,#e2e5ea);text-decoration:none;color:inherit">
+          <div class="avatar avatar--sm${r.playerPhoto ? " avatar--photo" : ""}" style="--c1:#1a1a1a;--c2:#3a3a3a">${avatarInner}</div>
+          <div style="flex:1;min-width:0">
+            <b>${r.player}</b> <span style="color:var(--muted)">→ ${r.interested}</span>
+          </div>
+          ${rumorLevelHTML(r.level)}
+          <span style="color:var(--muted);font-size:.85rem;white-space:nowrap">${when}</span>
+        </a>`;
+    }).join("");
+    host.innerHTML = offset === 0 ? rows : host.innerHTML + rows;
+    offset += items.length;
+    if (moreBtn) moreBtn.style.display = offset < (data?.total || 0) ? "" : "none";
+  };
+
+  if (moreBtn) moreBtn.addEventListener("click", loadMore);
+  loadMore();
 }
 
 async function initFichajesPage() {
@@ -3504,6 +3677,7 @@ async function initPlayerPage() {
         </div>
 
         <div style="display:grid;gap:20px">
+          ${player.attrs ? `
           <div class="panel" data-reveal>
             <div class="panel__head">
               <h3>Perfil técnico</h3>
@@ -3521,7 +3695,7 @@ async function initPlayerPage() {
                 )
                 .join("")}
             </div>
-          </div>
+          </div>` : ""}
 
           <div class="panel" data-reveal>
             <div class="panel__head"><h3>Jugadores similares</h3><span class="tag">IA</span></div>
@@ -4021,6 +4195,15 @@ document.addEventListener("DOMContentLoaded", () => {
       break;
     case "noticia":
       initNoticiaPage();
+      break;
+    case "noticias":
+      initNoticiasArchivePage();
+      break;
+    case "rumor":
+      initRumorPage();
+      break;
+    case "rumores":
+      initRumoresArchivePage();
       break;
     case "matches":
       initMatchesPage();

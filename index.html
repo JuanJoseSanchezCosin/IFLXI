@@ -97,7 +97,12 @@
         <div class="tm-news__ticker" aria-hidden="true">
           <div class="tm-news__ticker-track" id="news-ticker-track"></div>
         </div>
-        <div class="tm-news__grid" id="news-grid"></div>
+        <div style="position:relative">
+          <button type="button" id="news-slider-prev" aria-label="Anteriores" style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--line,#e2e5ea);background:var(--bg,#fff);cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.08)">‹</button>
+          <div class="tm-news__grid" id="news-grid" style="display:flex;gap:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none"></div>
+          <button type="button" id="news-slider-next" aria-label="Siguientes" style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--line,#e2e5ea);background:var(--bg,#fff);cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.08)">›</button>
+        </div>
+        <p style="text-align:center;margin-top:14px"><a class="btn btn--sm" href="noticias.html">Ver todas las noticias →</a></p>
       </div>
     </div>
   </section>

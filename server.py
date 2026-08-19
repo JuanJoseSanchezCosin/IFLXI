@@ -576,6 +576,32 @@ def players_free_agents(limit: int = Query(50, ge=1, le=200)):
     }
 
 
+@app.get("/api/players/{player_id}/market-value-history")
+def player_market_value_history(player_id: str):
+    """Todo el histórico de valores registrados para un jugador, más antiguo
+    primero — para el gráfico/tabla de evolución en su ficha."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT value_amount, currency::text AS currency, recorded_on
+                FROM market_value_history
+                WHERE player_id = %s
+                ORDER BY recorded_on ASC
+                """,
+                (player_id,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "value": float(r["value_amount"]),
+            "currency": r["currency"],
+            "recordedOn": r["recorded_on"].isoformat() if r["recorded_on"] else None,
+        }
+        for r in rows
+    ]
+
+
 @app.get("/api/players/{player_id}")
 def get_player(player_id: str):
     with connect() as conn:
@@ -596,7 +622,18 @@ def get_player(player_id: str):
                 (player_id,),
             )
             hist = cur.fetchall()
+            # Histórico real de valor (no el punto único fabricado de player_payload)
+            cur.execute(
+                "SELECT value_amount, recorded_on FROM market_value_history WHERE player_id = %s ORDER BY recorded_on ASC",
+                (player_id,),
+            )
+            value_rows = cur.fetchall()
     payload = player_payload(row)
+    if value_rows:
+        payload["valueHistory"] = [
+            [v["recorded_on"].year, round(float(v["value_amount"]) / 1_000_000, 2)]
+            for v in value_rows
+        ]
     if hist:
         payload["career"] = [
             {
@@ -1906,94 +1943,155 @@ def require_admin(x_admin_password: str | None = Header(None)) -> None:
 
 @app.get("/api/news")
 def list_news(limit: int = Query(10, ge=1, le=50)):
+    """Ranking para portada: destacada primero, luego por importancia y fecha."""
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, slot, title, excerpt, tag, image_url, created_at
+                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
                 FROM news_item
                 WHERE is_published = TRUE
-                ORDER BY slot ASC
+                ORDER BY is_featured DESC, importance DESC, created_at DESC
                 LIMIT %s
                 """,
                 (limit,),
             )
             rows = cur.fetchall()
-    return [
-        {
-            "id": str(r["id"]),
-            "slot": r["slot"],
-            "title": r["title"],
-            "excerpt": r["excerpt"],
-            "tag": r["tag"],
-            "image": r["image_url"],
-            "isMain": r["slot"] == 0,
-            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
-        }
-        for r in rows
-    ]
+    return [_news_item_json(r) for r in rows]
 
 
-@app.get("/api/admin/news/slots")
-def list_news_slots(x_admin_password: str | None = Header(None)):
-    """Estado de los 7 huecos (0=principal, 1..6=mini) para el panel de admin."""
+@app.get("/api/news/archive")
+def news_archive(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+    """Archivo completo, más recientes primero — para la página noticias.html."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM news_item WHERE is_published = TRUE")
+            total = int(cur.fetchone()["n"])
+            cur.execute(
+                """
+                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                FROM news_item
+                WHERE is_published = TRUE
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                (limit, offset),
+            )
+            rows = cur.fetchall()
+    return {"total": total, "limit": limit, "offset": offset, "items": [_news_item_json(r) for r in rows]}
+
+
+@app.get("/api/news/{news_id}")
+def get_news_item(news_id: str):
+    """Una noticia por su ID permanente — para noticia.html."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                FROM news_item
+                WHERE id = %s AND is_published = TRUE
+                """,
+                (news_id,),
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Noticia no encontrada")
+    return _news_item_json(row)
+
+
+def _news_item_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]),
+        "title": r["title"],
+        "excerpt": r["excerpt"],
+        "tag": r["tag"],
+        "image": r["image_url"],
+        "importance": r["importance"],
+        "isFeatured": bool(r["is_featured"]),
+        "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+    }
+
+
+@app.get("/api/admin/news/list")
+def admin_list_news(limit: int = Query(30, ge=1, le=100), x_admin_password: str | None = Header(None)):
+    """Listado de gestión para el panel de admin (para editar/borrar)."""
     require_admin(x_admin_password)
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT slot, id, title, excerpt, tag, image_url FROM news_item")
-            by_slot = {r["slot"]: r for r in cur.fetchall()}
-    return [
-        {
-            "slot": n,
-            "filled": n in by_slot,
-            "id": str(by_slot[n]["id"]) if n in by_slot else None,
-            "title": by_slot[n]["title"] if n in by_slot else None,
-            "excerpt": by_slot[n]["excerpt"] if n in by_slot else None,
-            "tag": by_slot[n]["tag"] if n in by_slot else None,
-            "image": by_slot[n]["image_url"] if n in by_slot else None,
-        }
-        for n in range(0, 7)
-    ]
+            cur.execute(
+                """
+                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                FROM news_item
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+    return [_news_item_json(r) for r in rows]
 
 
-@app.post("/api/admin/news/slot/{slot}")
-def upsert_news_slot(slot: int, payload: dict, x_admin_password: str | None = Header(None)):
+@app.post("/api/admin/news")
+def create_or_update_news(payload: dict, x_admin_password: str | None = Header(None)):
+    """Publica una noticia nueva (o actualiza una existente si mandas 'id',
+    por ejemplo para corregir una errata sin perder su URL). Nunca sustituye
+    a otra noticia distinta — cada una vive para siempre en su propia fila."""
     require_admin(x_admin_password)
-    if slot < 0 or slot > 6:
-        raise HTTPException(400, "Hueco fuera de rango (0-6)")
     title = (payload.get("title") or "").strip()
     if not title:
         raise HTTPException(400, "Falta el título")
     excerpt = (payload.get("excerpt") or "").strip() or None
     tag = (payload.get("tag") or "Mercado").strip()
     image_url = (payload.get("image") or "").strip() or None
+    try:
+        importance = int(payload.get("importance") or 3)
+    except (TypeError, ValueError):
+        importance = 3
+    importance = min(5, max(1, importance))
+    is_featured = bool(payload.get("isFeatured"))
+    existing_id = (payload.get("id") or "").strip() or None
+
     with connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO news_item (slot, title, excerpt, tag, image_url)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (slot) DO UPDATE SET
-                  title = EXCLUDED.title,
-                  excerpt = EXCLUDED.excerpt,
-                  tag = EXCLUDED.tag,
-                  image_url = COALESCE(EXCLUDED.image_url, news_item.image_url),
-                  updated_at = now()
-                RETURNING id
-                """,
-                (slot, title, excerpt, tag, image_url),
-            )
-            new_id = cur.fetchone()["id"]
-        conn.commit()
-    return {"id": str(new_id), "slot": slot}
+        with conn.transaction():
+            with conn.cursor() as cur:
+                if is_featured:
+                    cur.execute("UPDATE news_item SET is_featured = FALSE WHERE is_featured = TRUE")
+                if existing_id:
+                    cur.execute(
+                        """
+                        UPDATE news_item SET
+                          title = %s, excerpt = %s, tag = %s,
+                          image_url = COALESCE(%s, image_url),
+                          importance = %s, is_featured = %s, updated_at = now()
+                        WHERE id = %s
+                        RETURNING id
+                        """,
+                        (title, excerpt, tag, image_url, importance, is_featured, existing_id),
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        raise HTTPException(404, "Noticia no encontrada para actualizar")
+                    new_id = row["id"]
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO news_item (title, excerpt, tag, image_url, importance, is_featured)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                        """,
+                        (title, excerpt, tag, image_url, importance, is_featured),
+                    )
+                    new_id = cur.fetchone()["id"]
+    return {"id": str(new_id)}
 
 
-@app.delete("/api/admin/news/slot/{slot}")
-def delete_news_slot(slot: int, x_admin_password: str | None = Header(None)):
+@app.delete("/api/admin/news/{news_id}")
+def delete_news_item(news_id: str, x_admin_password: str | None = Header(None)):
     require_admin(x_admin_password)
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM news_item WHERE slot = %s", (slot,))
+            cur.execute("DELETE FROM news_item WHERE id = %s", (news_id,))
         conn.commit()
     return {"ok": True}
 
@@ -2121,42 +2219,66 @@ def delete_market_value(value_id: str, x_admin_password: str | None = Header(Non
     return {"ok": True}
 
 
+RUMOR_SELECT = """
+    SELECT
+      r.id, r.player_name, r.current_club, r.interested_club, r.level,
+      r.created_at, p.id AS player_uuid, p.api_football_id AS player_api_football_id,
+      tc.name_default AS current_club_real, tc.api_football_id AS current_club_api_football_id,
+      ti.name_default AS interested_club_real, ti.api_football_id AS interested_club_api_football_id
+    FROM rumor_item r
+    LEFT JOIN player p ON p.id = r.player_id
+    LEFT JOIN team tc ON tc.id = r.current_club_id
+    LEFT JOIN team ti ON ti.id = r.interested_club_id
+"""
+
+
+def _rumor_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]),
+        "player": r["player_name"],
+        "playerId": str(r["player_uuid"]) if r["player_uuid"] else None,
+        "playerPhoto": player_photo_url(r["player_api_football_id"]),
+        "club": r["current_club_real"] or r["current_club"],
+        "clubLogo": team_logo_url(r["current_club_api_football_id"]),
+        "interested": r["interested_club_real"] or r["interested_club"],
+        "interestedLogo": team_logo_url(r["interested_club_api_football_id"]),
+        "level": r["level"],
+        "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+    }
+
+
 @app.get("/api/rumors")
 def list_rumors(limit: int = Query(10, ge=1, le=50)):
     with connect() as conn:
         with conn.cursor() as cur:
+            cur.execute(RUMOR_SELECT + " WHERE r.is_published = TRUE ORDER BY r.created_at DESC LIMIT %s", (limit,))
+            rows = cur.fetchall()
+    return [_rumor_json(r) for r in rows]
+
+
+@app.get("/api/rumors/archive")
+def rumors_archive(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM rumor_item WHERE is_published = TRUE")
+            total = int(cur.fetchone()["n"])
             cur.execute(
-                """
-                SELECT
-                  r.id, r.player_name, r.current_club, r.interested_club, r.level,
-                  r.created_at, p.api_football_id AS player_api_football_id,
-                  tc.name_default AS current_club_real, tc.api_football_id AS current_club_api_football_id,
-                  ti.name_default AS interested_club_real, ti.api_football_id AS interested_club_api_football_id
-                FROM rumor_item r
-                LEFT JOIN player p ON p.id = r.player_id
-                LEFT JOIN team tc ON tc.id = r.current_club_id
-                LEFT JOIN team ti ON ti.id = r.interested_club_id
-                WHERE r.is_published = TRUE
-                ORDER BY r.created_at DESC
-                LIMIT %s
-                """,
-                (limit,),
+                RUMOR_SELECT + " WHERE r.is_published = TRUE ORDER BY r.created_at DESC LIMIT %s OFFSET %s",
+                (limit, offset),
             )
             rows = cur.fetchall()
-    return [
-        {
-            "id": str(r["id"]),
-            "player": r["player_name"],
-            "playerPhoto": player_photo_url(r["player_api_football_id"]),
-            "club": r["current_club_real"] or r["current_club"],
-            "clubLogo": team_logo_url(r["current_club_api_football_id"]),
-            "interested": r["interested_club_real"] or r["interested_club"],
-            "interestedLogo": team_logo_url(r["interested_club_api_football_id"]),
-            "level": r["level"],
-            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
-        }
-        for r in rows
-    ]
+    return {"total": total, "limit": limit, "offset": offset, "items": [_rumor_json(r) for r in rows]}
+
+
+@app.get("/api/rumors/{rumor_id}")
+def get_rumor(rumor_id: str):
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(RUMOR_SELECT + " WHERE r.id = %s AND r.is_published = TRUE", (rumor_id,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Rumor no encontrado")
+    return _rumor_json(row)
 
 
 @app.post("/api/admin/rumors")

@@ -82,6 +82,17 @@
   .admin-list-item button { background: none; border: none; color: #b3261e; cursor: pointer; font-size: 0.85rem; }
   .admin-gate { max-width: 360px; margin: 8px auto 100px; text-align: center; }
   .admin-thumb { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; border: 1px solid var(--line, #ddd); }
+  .admin-stars { font-size: 1.6rem; letter-spacing: 2px; cursor: pointer; }
+  .admin-stars span { color: #d7dae0; transition: color .1s; }
+  .admin-stars span.is-on { color: #f5a623; }
+  .admin-archive-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, #f0f1f3); font-size: 0.9rem; }
+  .admin-archive-item .stars { color: #f5a623; font-size: .8rem; white-space: nowrap; }
+  .admin-archive-item .tag-pill { background: var(--hover-fill, #f0f1f3); border-radius: 6px; padding: 2px 8px; font-size: .75rem; white-space: nowrap; }
+  .admin-archive-item a.title { flex: 1; color: inherit; text-decoration: none; font-weight: 600; }
+  .admin-archive-item a.title:hover { text-decoration: underline; }
+  .admin-archive-item button { background: none; border: none; cursor: pointer; font-size: .8rem; white-space: nowrap; }
+  .admin-archive-item .edit-btn { color: #1d6fd6; }
+  .admin-archive-item .del-btn { color: #b3261e; }
 </style>
 </head>
 
@@ -122,20 +133,21 @@
     <p class="hint" style="margin-bottom:24px">Rellena el formulario y dale a publicar — sale en la web al instante.</p>
 
     <div class="admin-card">
-      <h2>Noticia principal</h2>
-      <p class="hint">La noticia destacada grande de la portada. Publicar aquí sustituye siempre a la anterior.</p>
-      <form id="form-news-main">
+      <h2>Publicar noticia</h2>
+      <p class="hint">Cada noticia se guarda para siempre con su propia página — nunca se borra sola. Marca "Destacada" para que sea la grande de portada (solo puede haber una a la vez).</p>
+      <form id="form-news">
+        <input type="hidden" id="news-id">
         <div class="admin-field">
-          <label for="main-title">Titular</label>
-          <input type="text" id="main-title" required placeholder="Ej: Mbappé lidera las búsquedas IFLXI">
+          <label for="news-title">Titular</label>
+          <input type="text" id="news-title" required placeholder="Ej: Mbappé lidera las búsquedas IFLXI">
         </div>
         <div class="admin-field">
-          <label for="main-excerpt">Detalle (opcional)</label>
-          <textarea id="main-excerpt" placeholder="Una o dos frases de contexto"></textarea>
+          <label for="news-excerpt">Texto (deja líneas en blanco entre párrafos)</label>
+          <textarea id="news-excerpt" rows="5" placeholder="El desarrollo completo de la noticia…"></textarea>
         </div>
         <div class="admin-field">
-          <label for="main-tag">Categoría</label>
-          <select id="main-tag">
+          <label for="news-tag">Categoría</label>
+          <select id="news-tag">
             <option>Mercado</option>
             <option>Lab</option>
             <option>Arena</option>
@@ -145,55 +157,25 @@
           </select>
         </div>
         <div class="admin-field">
-          <label for="main-image">Imagen (deja vacío para no cambiarla)</label>
-          <input type="file" id="main-image" accept="image/*">
-          <div id="main-image-preview" style="margin-top:8px;display:flex;gap:8px"></div>
+          <label>Importancia</label>
+          <div id="news-stars" class="admin-stars" data-value="3">
+            <span data-star="1">★</span><span data-star="2">★</span><span data-star="3">★</span><span data-star="4">★</span><span data-star="5">★</span>
+          </div>
+          <input type="hidden" id="news-importance" value="3">
         </div>
-        <button class="admin-btn" type="submit">Publicar como principal</button>
-        <button type="button" class="admin-btn" id="main-clear" style="background:#b3261e;margin-left:8px">Vaciar</button>
-        <p class="admin-msg" id="main-msg"></p>
+        <div class="admin-field">
+          <label><input type="checkbox" id="news-featured" style="width:auto;margin-right:6px">Destacada (la grande de portada)</label>
+        </div>
+        <div class="admin-field">
+          <label for="news-image">Imagen</label>
+          <input type="file" id="news-image" accept="image/*">
+          <div id="news-image-preview" style="margin-top:8px;display:flex;gap:8px"></div>
+        </div>
+        <button class="admin-btn" type="submit">Publicar noticia</button>
+        <button type="button" class="admin-btn" id="news-cancel-edit" style="background:#666;margin-left:8px;display:none">Cancelar edición</button>
+        <p class="admin-msg" id="news-msg"></p>
       </form>
-    </div>
-
-    <div class="admin-card">
-      <h2>Noticias mini</h2>
-      <p class="hint">Elige qué hueco quieres cambiar (Mini 1 a Mini 6) y rellena su contenido.</p>
-      <div class="admin-field">
-        <label for="mini-slot-select">Hueco</label>
-        <select id="mini-slot-select">
-          <option value="1">Mini 1</option>
-          <option value="2">Mini 2</option>
-          <option value="3">Mini 3</option>
-          <option value="4">Mini 4</option>
-          <option value="5">Mini 5</option>
-          <option value="6">Mini 6</option>
-        </select>
-      </div>
-      <form id="form-news-mini">
-        <div class="admin-field">
-          <label for="mini-title">Titular</label>
-          <input type="text" id="mini-title" required placeholder="Ej: Plantillas Big 5 sincronizadas">
-        </div>
-        <div class="admin-field">
-          <label for="mini-tag">Categoría</label>
-          <select id="mini-tag">
-            <option>Mercado</option>
-            <option>Lab</option>
-            <option>Arena</option>
-            <option>Scouting</option>
-            <option>Datos</option>
-            <option>Clubes</option>
-          </select>
-        </div>
-        <div class="admin-field">
-          <label for="mini-image">Imagen (deja vacío para no cambiarla)</label>
-          <input type="file" id="mini-image" accept="image/*">
-          <div id="mini-image-preview" style="margin-top:8px;display:flex;gap:8px"></div>
-        </div>
-        <button class="admin-btn" type="submit">Publicar en este hueco</button>
-        <button type="button" class="admin-btn" id="mini-clear" style="background:#b3261e;margin-left:8px">Vaciar hueco</button>
-        <p class="admin-msg" id="mini-msg"></p>
-      </form>
+      <div class="admin-list" id="news-archive-list"></div>
     </div>
 
     <div class="admin-card">
@@ -279,25 +261,11 @@
   async function checkPassword() {
     // GET a un endpoint protegido: 200 = contraseña correcta, error = mostramos el motivo real.
     try {
-      await apiFetch("/api/admin/news/slots", { method: "GET" });
+      await apiFetch("/api/admin/news/list?limit=1", { method: "GET" });
       return { ok: true };
     } catch (e) {
       return { ok: false, message: e.message };
     }
-  }
-
-  let SLOTS = {};
-
-  function fillSlotForm(prefix, slotData) {
-    document.getElementById(`${prefix}-title`).value = slotData?.title || "";
-    if (document.getElementById(`${prefix}-excerpt`)) {
-      document.getElementById(`${prefix}-excerpt`).value = slotData?.excerpt || "";
-    }
-    document.getElementById(`${prefix}-tag`).value = slotData?.tag || "Mercado";
-    const preview = document.getElementById(`${prefix}-image-preview`);
-    preview.innerHTML = slotData?.image
-      ? `<img class="admin-thumb" src="${slotData.image}">`
-      : "";
   }
 
   document.getElementById("admin-enter").addEventListener("click", async () => {
@@ -314,27 +282,87 @@
     gateMsg.textContent = "";
     gate.style.display = "none";
     panel.style.display = "block";
-    await loadSlots();
+    loadNewsArchive();
     loadRumors();
     loadMarketValues();
   });
 
-  async function loadSlots() {
+  // --- Estrellas de importancia ---
+  const starsWrap = document.getElementById("news-stars");
+  const importanceInput = document.getElementById("news-importance");
+  function paintStars(value) {
+    starsWrap.dataset.value = value;
+    importanceInput.value = value;
+    starsWrap.querySelectorAll("span").forEach((s) => {
+      s.classList.toggle("is-on", Number(s.dataset.star) <= value);
+    });
+  }
+  starsWrap.querySelectorAll("span").forEach((s) => {
+    s.addEventListener("click", () => paintStars(Number(s.dataset.star)));
+  });
+  paintStars(3);
+
+  function resetNewsForm() {
+    document.getElementById("form-news").reset();
+    document.getElementById("news-id").value = "";
+    document.getElementById("news-image-preview").innerHTML = "";
+    document.getElementById("news-cancel-edit").style.display = "none";
+    paintStars(3);
+  }
+
+  function fillNewsForm(item) {
+    document.getElementById("news-id").value = item.id;
+    document.getElementById("news-title").value = item.title || "";
+    document.getElementById("news-excerpt").value = item.excerpt || "";
+    document.getElementById("news-tag").value = item.tag || "Mercado";
+    document.getElementById("news-featured").checked = !!item.isFeatured;
+    paintStars(item.importance || 3);
+    const preview = document.getElementById("news-image-preview");
+    preview.innerHTML = item.image ? `<img class="admin-thumb" src="${item.image}">` : "";
+    document.getElementById("news-cancel-edit").style.display = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.getElementById("news-cancel-edit").addEventListener("click", resetNewsForm);
+
+  async function loadNewsArchive() {
+    const list = document.getElementById("news-archive-list");
+    list.innerHTML = "Cargando…";
     try {
-      const slots = await apiFetch("/api/admin/news/slots", { method: "GET" });
-      SLOTS = {};
-      slots.forEach((s) => { SLOTS[s.slot] = s; });
-      fillSlotForm("main", SLOTS[0]);
-      const miniSelect = document.getElementById("mini-slot-select");
-      fillSlotForm("mini", SLOTS[Number(miniSelect.value)]);
+      const items = await apiFetch("/api/admin/news/list?limit=30", { method: "GET" });
+      window.__newsArchive = items;
+      list.innerHTML = items.length
+        ? items.map((n) => `
+            <div class="admin-archive-item">
+              <span class="stars">${"★".repeat(n.importance)}${"☆".repeat(5 - n.importance)}</span>
+              <span class="tag-pill">${n.tag}${n.isFeatured ? " · Destacada" : ""}</span>
+              <a class="title" href="noticia.html?id=${n.id}" target="_blank">${n.title}</a>
+              <button class="edit-btn" data-edit="${n.id}">Editar</button>
+              <button class="del-btn" data-del="${n.id}">Borrar</button>
+            </div>`).join("")
+        : "<p class='hint'>Sin noticias publicadas todavía.</p>";
     } catch (e) {
-      document.getElementById("main-msg").textContent = "No se pudieron cargar los huecos: " + e.message;
+      list.innerHTML = `<p class="admin-msg err">${e.message}</p>`;
     }
   }
 
-  document.getElementById("mini-slot-select").addEventListener("change", (e) => {
-    fillSlotForm("mini", SLOTS[Number(e.target.value)]);
-    document.getElementById("mini-msg").textContent = "";
+  document.getElementById("news-archive-list").addEventListener("click", async (e) => {
+    const editBtn = e.target.closest("[data-edit]");
+    if (editBtn) {
+      const item = (window.__newsArchive || []).find((n) => n.id === editBtn.dataset.edit);
+      if (item) fillNewsForm(item);
+      return;
+    }
+    const delBtn = e.target.closest("[data-del]");
+    if (delBtn) {
+      if (!confirm("¿Borrar esta noticia para siempre? No se puede deshacer.")) return;
+      try {
+        await apiFetch(`/api/admin/news/${delBtn.dataset.del}`, { method: "DELETE" });
+        loadNewsArchive();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
   });
 
   async function loadRumors() {
@@ -495,8 +523,7 @@
       preview.appendChild(img);
     });
   }
-  wirePreview("main-image", "main-image-preview");
-  wirePreview("mini-image", "mini-image-preview");
+  wirePreview("news-image", "news-image-preview");
 
   async function uploadImage(file, kind) {
     const fd = new FormData();
@@ -516,65 +543,40 @@
     return data.url;
   }
 
-  function getSlotNumber(prefix) {
-    return prefix === "main" ? 0 : Number(document.getElementById("mini-slot-select").value);
-  }
-
-  async function submitNews({ formId, msgId, prefix, hasExcerpt, imageKind }) {
-    const form = document.getElementById(formId);
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById(msgId);
-      msg.className = "admin-msg";
-      const slot = getSlotNumber(prefix);
-      try {
-        const imageInput = document.getElementById(`${prefix}-image`);
-        let image = "";
-        if (imageInput.files[0]) {
-          msg.textContent = "Subiendo imagen…";
-          image = await uploadImage(imageInput.files[0], imageKind);
-        }
-        msg.textContent = "Publicando…";
-        await apiFetch(`/api/admin/news/slot/${slot}`, {
-          method: "POST",
-          body: JSON.stringify({
-            title: document.getElementById(`${prefix}-title`).value,
-            excerpt: hasExcerpt ? document.getElementById(`${prefix}-excerpt`).value : "",
-            tag: document.getElementById(`${prefix}-tag`).value,
-            image,
-          }),
-        });
-        msg.className = "admin-msg ok";
-        msg.textContent = "Publicado ✓";
-        imageInput.value = "";
-        await loadSlots();
-      } catch (err) {
-        msg.className = "admin-msg err";
-        msg.textContent = err.message;
-      }
-    });
-  }
-
-  submitNews({ formId: "form-news-main", msgId: "main-msg", prefix: "main", hasExcerpt: true, imageKind: "main" });
-  submitNews({ formId: "form-news-mini", msgId: "mini-msg", prefix: "mini", hasExcerpt: false, imageKind: "mini" });
-
-  async function clearSlot(prefix) {
-    const slot = getSlotNumber(prefix);
-    const msg = document.getElementById(`${prefix}-msg`);
-    if (!confirm(`¿Vaciar este hueco (${prefix === "main" ? "Principal" : "Mini " + slot})?`)) return;
+  document.getElementById("form-news").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("news-msg");
+    msg.className = "admin-msg";
     try {
-      await apiFetch(`/api/admin/news/slot/${slot}`, { method: "DELETE" });
+      const imageInput = document.getElementById("news-image");
+      let image = "";
+      if (imageInput.files[0]) {
+        msg.textContent = "Subiendo imagen…";
+        image = await uploadImage(imageInput.files[0], "main");
+      }
+      msg.textContent = "Publicando…";
+      const existingId = document.getElementById("news-id").value;
+      await apiFetch("/api/admin/news", {
+        method: "POST",
+        body: JSON.stringify({
+          id: existingId || undefined,
+          title: document.getElementById("news-title").value,
+          excerpt: document.getElementById("news-excerpt").value,
+          tag: document.getElementById("news-tag").value,
+          importance: Number(document.getElementById("news-importance").value),
+          isFeatured: document.getElementById("news-featured").checked,
+          image,
+        }),
+      });
       msg.className = "admin-msg ok";
-      msg.textContent = "Hueco vaciado ✓";
-      document.getElementById(`form-news-${prefix}`).reset();
-      await loadSlots();
+      msg.textContent = existingId ? "Actualizada ✓" : "Publicada ✓";
+      resetNewsForm();
+      loadNewsArchive();
     } catch (err) {
       msg.className = "admin-msg err";
       msg.textContent = err.message;
     }
-  }
-  document.getElementById("main-clear").addEventListener("click", () => clearSlot("main"));
-  document.getElementById("mini-clear").addEventListener("click", () => clearSlot("mini"));
+  });
 
   document.getElementById("form-rumor").addEventListener("submit", async (e) => {
     e.preventDefault();
