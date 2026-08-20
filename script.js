@@ -2105,6 +2105,7 @@ async function initNewsRail() {
     if (Array.isArray(real) && real.length) {
       items = real.map((n) => ({
         id: n.id,
+        slug: n.slug,
         tag: n.tag,
         time: relativeTimeShort(n.createdAt),
         title: n.title,
@@ -2132,7 +2133,7 @@ async function initNewsRail() {
     const thumb = n.image
       ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px 8px 0 0">`
       : n.tag;
-    const href = n.id != null ? `noticia.html?id=${n.id}` : "#fichajes";
+    const href = n.id != null ? `/noticia/${n.slug || n.id}` : "#fichajes";
     return `
     <a class="tm-news__item" href="${href}" style="--c:${n.c};flex:0 0 300px;scroll-snap-align:start;margin-right:16px;display:flex;flex-direction:column;border:1px solid var(--line,#e2e5ea);border-radius:8px;overflow:hidden;background:var(--bg,#fff)${n.isFeatured ? ";outline:2px solid #f5a623" : ""}">
       <div class="tm-news__thumb" style="aspect-ratio:16/10;margin:0">${thumb}</div>
@@ -2545,18 +2546,39 @@ async function initHome() {
   initRowLinks();
 }
 
+/** Actualiza título + todas las etiquetas de vista previa (Google, WhatsApp,
+ * X, Facebook…) para que cada noticia se enmarque con su propio contenido
+ * real, no el genérico de la web. */
+function updateArticleMeta({ title, description, image, url }) {
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const setAttr = (id, val) => { const el = document.getElementById(id); if (el) el.setAttribute("content", val); };
+  setText("meta-title", title);
+  setAttr("meta-description", description);
+  setAttr("meta-og-title", title);
+  setAttr("meta-og-description", description);
+  setAttr("meta-og-url", url);
+  setAttr("meta-og-image", image);
+  setAttr("meta-twitter-title", title);
+  setAttr("meta-twitter-description", description);
+  setAttr("meta-twitter-image", image);
+}
+
 async function initNoticiaPage() {
   const root = $("#noticia-root");
   if (!root) return;
-  const id = new URLSearchParams(location.search).get("id");
+  const params = new URLSearchParams(location.search);
+  // La URL bonita (/noticia/algun-titulo) la reescribe Netlify por dentro;
+  // el navegador solo ve la ruta visible, no el ?slug= interno de la regla.
+  const pathMatch = location.pathname.match(/^\/noticia\/([^/]+)\/?$/);
+  const slug = pathMatch ? decodeURIComponent(pathMatch[1]) : params.get("slug");
+  const id = params.get("id");
 
   let n = null;
-  if (id) {
-    try {
-      n = await jget(`/api/news/${encodeURIComponent(id)}`);
-    } catch {
-      /* no encontrada o API caída */
-    }
+  try {
+    if (slug) n = await jget(`/api/news/by-slug/${encodeURIComponent(slug)}`);
+    else if (id) n = await jget(`/api/news/${encodeURIComponent(id)}`);
+  } catch {
+    /* no encontrada o API caída */
   }
 
   if (!n) {
@@ -2564,35 +2586,108 @@ async function initNoticiaPage() {
       <div class="empty-state">
         <h2>Noticia no encontrada</h2>
         <p style="margin:10px 0 20px">Puede que se haya quitado o cambiado.</p>
-        <a class="btn btn--primary" href="index.html">Volver al inicio</a>
+        <a class="btn btn--primary" href="/index.html">Volver al inicio</a>
       </div>`;
     return;
   }
 
   document.title = `${n.title} | IFLXI`;
-  const when = relativeTimeShort(n.createdAt);
+  if (n.slug && !location.pathname.includes(`/noticia/${n.slug}`)) {
+    history.replaceState(null, "", `/noticia/${n.slug}`);
+  }
+  updateArticleMeta({
+    title: `${n.title} | IFLXI`,
+    description: (n.excerpt || "").replace(/\n+/g, " ").slice(0, 160) || "Noticias reales de IFLXI.",
+    image: n.image || "/brand/og-image.png",
+    url: location.href,
+  });
+
+  const dateObj = n.createdAt ? new Date(n.createdAt) : null;
+  const fullDate = dateObj
+    ? new Intl.DateTimeFormat(currentLang() === "en" ? "en-GB" : "es-ES", {
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      }).format(dateObj)
+    : "";
   const paragraphs = (n.excerpt || "")
     .split(/\n+/)
     .filter((p) => p.trim())
-    .map((p) => `<p style="margin:0 0 16px;line-height:1.7">${p}</p>`)
+    .map((p) => `<p style="margin:0 0 16px;line-height:1.75;font-size:1.05rem">${p}</p>`)
     .join("");
+  const wordCount = (n.excerpt || "").split(/\s+/).filter(Boolean).length;
+  const readMin = Math.max(1, Math.round(wordCount / 200));
+  const readLabel = readMin < 1 ? "menos de 1 min" : `${readMin} min de lectura`;
+  const shareUrl = encodeURIComponent(location.href);
+  const shareTitle = encodeURIComponent(n.title);
+
+  // Panel lateral: otras noticias recientes (excluyendo esta).
+  let related = [];
+  try {
+    const list = await jget("/api/news?limit=6");
+    related = (Array.isArray(list) ? list : []).filter((x) => x.id !== n.id).slice(0, 4);
+  } catch {
+    /* sin más noticias que mostrar */
+  }
+  const relatedHTML = related.length
+    ? related.map((r) => `
+        <a href="/noticia/${r.slug || r.id}" style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line,#e2e5ea);text-decoration:none;color:inherit">
+          <div style="flex:0 0 64px;height:48px;border-radius:6px;overflow:hidden;background:${NEWS_TAG_COLOR[r.tag] || "#1d2b53"}">
+            ${r.image ? `<img src="${r.image}" alt="" style="width:100%;height:100%;object-fit:cover">` : ""}
+          </div>
+          <div style="min-width:0">
+            <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:700">${r.tag}</span>
+            <p style="margin:2px 0 0;font-size:.85rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${r.title}</p>
+          </div>
+        </a>`).join("")
+    : `<p class="empty-note" style="font-size:.85rem">Sin más noticias todavía.</p>`;
 
   root.innerHTML = `
-    <nav class="breadcrumb" style="margin-bottom:18px">
-      <a href="index.html">Inicio</a> <span>›</span>
+    <nav class="breadcrumb" style="margin-bottom:14px">
+      <a href="/index.html">Inicio</a> <span>›</span>
+      <a href="/noticias.html">Noticias</a> <span>›</span>
       <span style="color:var(--muted)">${n.tag}</span>
     </nav>
-    ${n.image ? `<img src="${n.image}" alt="" style="width:100%;border-radius:10px;margin-bottom:20px;max-height:420px;object-fit:cover">` : ""}
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
-      <span class="tag tag--accent">${n.tag}</span>
-      <span style="color:var(--muted);font-size:.9rem">${when}</span>
-    </div>
-    <h1 style="margin:0 0 20px;font-size:2rem;line-height:1.2">${n.title}</h1>
-    ${paragraphs || `<p class="empty-note">Sin más detalle todavía.</p>`}
-    <p style="margin-top:32px;display:flex;gap:14px">
-      <a class="btn btn--sm" href="index.html">← Volver al inicio</a>
-      <a class="btn btn--sm btn--ghost" href="noticias.html">Ver todas las noticias</a>
-    </p>`;
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:36px;align-items:start">
+      <div style="min-width:0">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:.85rem;color:var(--muted)">
+          <span class="tag tag--accent" style="font-size:.75rem">${n.tag}</span>
+          <span>${fullDate}</span>
+          <span>·</span>
+          <span>${readLabel}</span>
+          ${n.isFeatured ? `<span style="color:#f5a623">★ Destacada</span>` : ""}
+        </div>
+
+        <h1 style="margin:0 0 16px;font-size:1.9rem;line-height:1.2">${n.title}</h1>
+
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <a href="https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}" target="_blank" rel="noopener" class="btn btn--sm btn--ghost" title="Compartir en X">X</a>
+          <a href="mailto:?subject=${shareTitle}&body=${shareUrl}" class="btn btn--sm btn--ghost" title="Compartir por email">✉</a>
+        </div>
+
+        ${n.image
+          ? `<figure style="margin:0 0 22px">
+               <img src="${n.image}" alt="" style="width:100%;border-radius:10px;max-height:440px;object-fit:cover;display:block">
+               <figcaption style="font-size:.75rem;color:var(--muted);margin-top:6px;text-align:right">IFLXI</figcaption>
+             </figure>`
+          : ""}
+
+        ${paragraphs || `<p class="empty-note">Sin más detalle todavía.</p>`}
+
+        <p style="margin-top:32px;display:flex;gap:14px">
+          <a class="btn btn--sm" href="/index.html">← Volver al inicio</a>
+          <a class="btn btn--sm btn--ghost" href="/noticias.html">Ver todas las noticias</a>
+        </p>
+      </div>
+
+      <aside style="min-width:0">
+        <div class="panel tm-panel">
+          <div class="panel__head tm-panel__head"><h3 style="font-size:.95rem">Más noticias</h3></div>
+          <div style="padding:0 16px">${relatedHTML}</div>
+        </div>
+      </aside>
+    </div>`;
+
+  initRowLinks(root);
 }
 
 async function initNoticiasArchivePage() {
@@ -2622,7 +2717,7 @@ async function initNoticiasArchivePage() {
         ? `<img src="${n.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
         : `<div style="width:100%;height:100%;background:${NEWS_TAG_COLOR[n.tag] || "#1d2b53"};border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:.75rem;text-transform:uppercase">${n.tag}</div>`;
       return `
-        <a href="noticia.html?id=${n.id}" style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--line,#e2e5ea);text-decoration:none;color:inherit">
+        <a href="/noticia/${n.slug || n.id}" style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--line,#e2e5ea);text-decoration:none;color:inherit">
           <div style="flex:0 0 120px;aspect-ratio:4/3">${thumb}</div>
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">

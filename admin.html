@@ -336,7 +336,7 @@
             <div class="admin-archive-item">
               <span class="stars">${"★".repeat(n.importance)}${"☆".repeat(5 - n.importance)}</span>
               <span class="tag-pill">${n.tag}${n.isFeatured ? " · Destacada" : ""}</span>
-              <a class="title" href="noticia.html?id=${n.id}" target="_blank">${n.title}</a>
+              <a class="title" href="/noticia/${n.slug || n.id}" target="_blank">${n.title}</a>
               <button class="edit-btn" data-edit="${n.id}">Editar</button>
               <button class="del-btn" data-del="${n.id}">Borrar</button>
             </div>`).join("")

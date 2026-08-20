@@ -7,6 +7,11 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/noticia/:slug"
+  to = "/noticia.html?slug=:slug"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

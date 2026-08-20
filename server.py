@@ -16,6 +16,8 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
+import unicodedata
 import uuid as uuid_lib
 from datetime import date
 from pathlib import Path
@@ -1941,6 +1943,28 @@ def require_admin(x_admin_password: str | None = Header(None)) -> None:
         raise HTTPException(401, "Contraseña de administrador incorrecta")
 
 
+def slugify(text: str) -> str:
+    """'Yamal ficha por el Manchester United' -> 'yamal-ficha-por-el-manchester-united'"""
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
+    return text[:80].strip("-") or "noticia"
+
+
+def unique_news_slug(cur, title: str, exclude_id: str | None = None) -> str:
+    base = slugify(title)
+    slug = base
+    n = 2
+    while True:
+        if exclude_id:
+            cur.execute("SELECT 1 FROM news_item WHERE slug = %s AND id != %s", (slug, exclude_id))
+        else:
+            cur.execute("SELECT 1 FROM news_item WHERE slug = %s", (slug,))
+        if not cur.fetchone():
+            return slug
+        slug = f"{base}-{n}"
+        n += 1
+
+
 @app.get("/api/news")
 def list_news(limit: int = Query(10, ge=1, le=50)):
     """Ranking para portada: destacada primero, luego por importancia y fecha."""
@@ -1948,7 +1972,7 @@ def list_news(limit: int = Query(10, ge=1, le=50)):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                SELECT id, slug, title, excerpt, tag, image_url, importance, is_featured, created_at
                 FROM news_item
                 WHERE is_published = TRUE
                 ORDER BY is_featured DESC, importance DESC, created_at DESC
@@ -1969,7 +1993,7 @@ def news_archive(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge
             total = int(cur.fetchone()["n"])
             cur.execute(
                 """
-                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                SELECT id, slug, title, excerpt, tag, image_url, importance, is_featured, created_at
                 FROM news_item
                 WHERE is_published = TRUE
                 ORDER BY created_at DESC
@@ -1988,7 +2012,7 @@ def get_news_item(news_id: str):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                SELECT id, slug, title, excerpt, tag, image_url, importance, is_featured, created_at
                 FROM news_item
                 WHERE id = %s AND is_published = TRUE
                 """,
@@ -2000,9 +2024,29 @@ def get_news_item(news_id: str):
     return _news_item_json(row)
 
 
+@app.get("/api/news/by-slug/{slug}")
+def get_news_item_by_slug(slug: str):
+    """Igual que /api/news/{id} pero buscando por slug — para URLs legibles."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, slug, title, excerpt, tag, image_url, importance, is_featured, created_at
+                FROM news_item
+                WHERE slug = %s AND is_published = TRUE
+                """,
+                (slug,),
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Noticia no encontrada")
+    return _news_item_json(row)
+
+
 def _news_item_json(r: dict) -> dict:
     return {
         "id": str(r["id"]),
+        "slug": r.get("slug"),
         "title": r["title"],
         "excerpt": r["excerpt"],
         "tag": r["tag"],
@@ -2021,7 +2065,7 @@ def admin_list_news(limit: int = Query(30, ge=1, le=100), x_admin_password: str 
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, title, excerpt, tag, image_url, importance, is_featured, created_at
+                SELECT id, slug, title, excerpt, tag, image_url, importance, is_featured, created_at
                 FROM news_item
                 ORDER BY created_at DESC
                 LIMIT %s
@@ -2058,6 +2102,8 @@ def create_or_update_news(payload: dict, x_admin_password: str | None = Header(N
                 if is_featured:
                     cur.execute("UPDATE news_item SET is_featured = FALSE WHERE is_featured = TRUE")
                 if existing_id:
+                    # El slug NO se toca al editar, aunque cambie el título —
+                    # la URL ya compartida debe seguir funcionando siempre.
                     cur.execute(
                         """
                         UPDATE news_item SET
@@ -2074,13 +2120,14 @@ def create_or_update_news(payload: dict, x_admin_password: str | None = Header(N
                         raise HTTPException(404, "Noticia no encontrada para actualizar")
                     new_id = row["id"]
                 else:
+                    slug = unique_news_slug(cur, title)
                     cur.execute(
                         """
-                        INSERT INTO news_item (title, excerpt, tag, image_url, importance, is_featured)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO news_item (title, excerpt, tag, image_url, importance, is_featured, slug)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                         """,
-                        (title, excerpt, tag, image_url, importance, is_featured),
+                        (title, excerpt, tag, image_url, importance, is_featured, slug),
                     )
                     new_id = cur.fetchone()["id"]
     return {"id": str(new_id)}
