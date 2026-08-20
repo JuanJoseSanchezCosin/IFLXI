@@ -392,7 +392,8 @@ def stats():
                   (SELECT COUNT(*) FROM country) AS countries,
                   (SELECT COUNT(*) FROM player_team_history WHERE end_date IS NULL) AS open_histories,
                   (SELECT COUNT(*) FROM match) AS matches,
-                  (SELECT COUNT(*) FROM match_event) AS match_events
+                  (SELECT COUNT(*) FROM match_event) AS match_events,
+                  (SELECT COUNT(DISTINCT player_id) FROM market_value_history) AS market_value
                 """
             )
             row = cur.fetchone()
@@ -404,7 +405,7 @@ def stats():
         "openHistories": int(row["open_histories"]),
         "matches": int(row["matches"]),
         "matchEvents": int(row["match_events"]),
-        "marketValue": 0,
+        "marketValue": int(row["market_value"]),
         "live": True,
     }
 
