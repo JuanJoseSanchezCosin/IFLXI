@@ -76,6 +76,34 @@ def connect():
         row_factory=dict_row,
     )
 
+def ensure_news_schema():
+    """Sincroniza el esquema mínimo de noticias con el backend actual."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                ALTER TABLE news_item
+                ADD COLUMN IF NOT EXISTS slug TEXT
+            """)
+            cur.execute("""
+                ALTER TABLE news_item
+                ADD COLUMN IF NOT EXISTS importance INTEGER NOT NULL DEFAULT 3
+            """)
+            cur.execute("""
+                ALTER TABLE news_item
+                ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE
+            """)
+
+            # Generar slugs para las noticias antiguas que no tengan uno.
+            cur.execute("""
+                UPDATE news_item
+                SET slug = 'noticia-' || id::text
+                WHERE slug IS NULL OR slug = ''
+            """)
+
+            conn.commit()
+
+ensure_news_schema()
+
 
 def age_from_birth(b: date | None) -> int | None:
     if not b:
