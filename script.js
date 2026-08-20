@@ -1582,6 +1582,15 @@ function matchDetailHTML(match) {
 /* --- Gráfico de evolución de valor (SVG puro) ---------------------------- */
 
 function renderValueChart(host, history) {
+  if (!Array.isArray(history) || history.length === 0) {
+    host.innerHTML = `
+      <div class="empty-state">
+        <span>Sin datos de evolución de valor</span>
+      </div>
+    `;
+    return;
+  }
+
   const W = 720, H = 280;
   const pad = { t: 24, r: 18, b: 38, l: 52 };
   const innerW = W - pad.l - pad.r;
