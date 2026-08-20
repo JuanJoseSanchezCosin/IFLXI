@@ -1240,17 +1240,24 @@ def lab_showcase(limit: int = Query(8, ge=1, le=16)):
 @app.get("/api/search")
 def search(q: str = Query("", min_length=1)):
     q = q.strip()
+    normalized_q = normalize_search(q)
     like = f"%{q}%"
+    normalized_like = f"%{normalized_q}%"
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 PLAYER_SELECT
                 + """
-                WHERE per.display_name ILIKE %s OR per.full_name ILIKE %s OR t.name_default ILIKE %s
+                WHERE per.display_name ILIKE %s
+                   OR per.full_name ILIKE %s
+                   OR t.name_default ILIKE %s
+                   OR unaccent(per.display_name) ILIKE %s
+                   OR unaccent(per.full_name) ILIKE %s
+                   OR unaccent(t.name_default) ILIKE %s
                 ORDER BY per.display_name
                 LIMIT 8
                 """,
-                (like, like, like),
+                (like, like, like, normalized_like, normalized_like, normalized_like),
             )
             players = [player_payload(r) for r in cur.fetchall()]
 
@@ -1970,6 +1977,11 @@ def require_admin(x_admin_password: str | None = Header(None)) -> None:
         raise HTTPException(500, "ADMIN_PASSWORD no configurada en el servidor")
     if not x_admin_password or x_admin_password != expected:
         raise HTTPException(401, "Contraseña de administrador incorrecta")
+
+
+def normalize_search(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text or "")
+    return "".join(c for c in text if not unicodedata.combining(c)).lower()
 
 
 def slugify(text: str) -> str:
