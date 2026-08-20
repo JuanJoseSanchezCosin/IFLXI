@@ -76,34 +76,6 @@ def connect():
         row_factory=dict_row,
     )
 
-def ensure_news_schema():
-    """Sincroniza el esquema mínimo de noticias con el backend actual."""
-    with connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                ALTER TABLE news_item
-                ADD COLUMN IF NOT EXISTS slug TEXT
-            """)
-            cur.execute("""
-                ALTER TABLE news_item
-                ADD COLUMN IF NOT EXISTS importance INTEGER NOT NULL DEFAULT 3
-            """)
-            cur.execute("""
-                ALTER TABLE news_item
-                ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE
-            """)
-
-            # Generar slugs para las noticias antiguas que no tengan uno.
-            cur.execute("""
-                UPDATE news_item
-                SET slug = 'noticia-' || id::text
-                WHERE slug IS NULL OR slug = ''
-            """)
-
-            conn.commit()
-
-ensure_news_schema()
-
 
 def age_from_birth(b: date | None) -> int | None:
     if not b:
@@ -271,7 +243,7 @@ def club_payload(row: dict | None) -> dict:
             "logo": None,
             **colors_from_text("x"),
         }
-    name = row.get("team_name") or row.get("name_default") or "Club"
+    name = row.get("team_name_override") or row.get("team_name") or row.get("name_default") or "Club"
     code = (row.get("team_code") or row.get("code") or name[:3]).upper()[:3]
     cols = colors_from_text(name)
     return {
@@ -279,8 +251,10 @@ def club_payload(row: dict | None) -> dict:
         "name": name,
         "short": code,
         "league": row.get("competition_name") or "—",
-        "country": row.get("country_name") or "—",
-        "logo": team_logo_url(row.get("team_api_football_id") or row.get("api_football_id")),
+        "country": row.get("country_override") or row.get("country_name") or "—",
+        "city": row.get("city_override") or "—",
+        "founded": row.get("founded_year_override") or row.get("founded_year") or None,
+        "logo": row.get("team_logo_override") or team_logo_url(row.get("team_api_football_id") or row.get("api_football_id")),
         **cols,
     }
 
@@ -289,7 +263,7 @@ def player_payload(row: dict) -> dict:
     """Solo datos reales de BD. Sin inventar edad ni valor de mercado."""
     pos = row.get("primary_position") or "CM"
     label, short, _demo_attrs = POS_META.get(pos, POS_META["CM"])
-    birth = row.get("birth_date")
+    birth = row.get("birth_date_override") or row.get("birth_date")
     age = age_from_birth(birth)
     # age_hint solo si viene de un import que lo guardó (no inventar 24)
     if age is None and row.get("age_hint") not in (None, ""):
@@ -299,7 +273,7 @@ def player_payload(row: dict) -> dict:
             age = None
 
     club = club_payload(row)
-    name = row.get("display_name") or row.get("full_name") or "Jugador"
+    name = row.get("player_name_override") or row.get("display_name") or row.get("full_name") or "Jugador"
     pid = str(row["player_id"])
 
     # Valor: solo si existe market_value_history (en millones EUR para la UI)
@@ -322,19 +296,21 @@ def player_payload(row: dict) -> dict:
     return {
         "id": pid,
         "name": name,
-        "photo": player_photo_url(row.get("player_api_football_id")),
-        "shirt": row.get("shirt_number") if row.get("shirt_number") is not None else "—",
+        "photo": row.get("player_photo_override") or player_photo_url(row.get("player_api_football_id")),
+        "shirt": row.get("shirt_number_override") if row.get("shirt_number_override") is not None else (row.get("shirt_number") if row.get("shirt_number") is not None else "—"),
         "age": age,  # null si desconocida
         "birth": birth_str,
-        "nationality": row.get("nationality") or "—",
+        "nationality": row.get("nationality_override") or row.get("nationality") or "—",
         "flag": "",
-        "position": label,
+        "position": row.get("position_override") or label,
+        "secondaryPosition": row.get("secondary_position_override") or row.get("secondary_position") or None,
         "pos": short,
         "club": club["id"],
         "clubInfo": club,
         "contract": "—",  # sin entidad CONTRACT en MVP
-        "height": height if height else "—",
-        "foot": foot,
+        "height": row.get("height_cm_override") or (height if height else "—"),
+        "weight": row.get("weight_kg_override") or row.get("weight_kg") or "—",
+        "foot": row.get("foot_override") or foot,
         "value": value,  # null = aún no hay fuente de mercado en BD
         "stats": {"matches": 0, "goals": 0, "assists": 0, "minutes": 0},
         # Sin attrs inventados: la UI no debe mostrar "Rating IA" falso
@@ -392,8 +368,7 @@ def stats():
                   (SELECT COUNT(*) FROM country) AS countries,
                   (SELECT COUNT(*) FROM player_team_history WHERE end_date IS NULL) AS open_histories,
                   (SELECT COUNT(*) FROM match) AS matches,
-                  (SELECT COUNT(*) FROM match_event) AS match_events,
-                  (SELECT COUNT(DISTINCT player_id) FROM market_value_history) AS market_value
+                  (SELECT COUNT(*) FROM match_event) AS match_events
                 """
             )
             row = cur.fetchone()
@@ -405,7 +380,7 @@ def stats():
         "openHistories": int(row["open_histories"]),
         "matches": int(row["matches"]),
         "matchEvents": int(row["match_events"]),
-        "marketValue": int(row["market_value"]),
+        "marketValue": 0,
         "live": True,
     }
 
@@ -414,6 +389,16 @@ PLAYER_SELECT = """
 SELECT
   p.id AS player_id,
   p.api_football_id AS player_api_football_id,
+  p.name_override AS player_name_override,
+  p.photo_url_override AS player_photo_override,
+  p.height_cm_override,
+  p.shirt_number_override,
+  p.foot_override,
+  p.position_override,
+  p.secondary_position_override,
+  p.weight_kg_override,
+  p.nationality_override,
+  p.birth_date_override,
   per.full_name,
   per.display_name,
   per.birth_date,
@@ -427,6 +412,11 @@ SELECT
   t.name_default AS team_name,
   t.code AS team_code,
   t.api_football_id AS team_api_football_id,
+  t.name_override AS team_name_override,
+  t.logo_url_override AS team_logo_override,
+  t.founded_year_override,
+  t.city_override,
+  t.country_override,
   ctry.name_default AS country_name,
   (
     SELECT c.name_default
@@ -1067,6 +1057,8 @@ def get_team(team_id: str):
             cur.execute(
                 """
                 SELECT t.id, t.name_default, t.code, t.founded_year, t.api_football_id,
+                       t.name_override AS team_name_override, t.logo_url_override AS team_logo_override,
+                       t.founded_year_override, t.city_override, t.country_override,
                        c.name_default AS country_name,
                        (
                          SELECT comp.name_default
@@ -1149,6 +1141,12 @@ def get_team(team_id: str):
             "api_football_id": team["api_football_id"],
             "country_name": team["country_name"],
             "competition_name": team["competition_name"],
+            "founded_year": team["founded_year"],
+            "team_name_override": team["team_name_override"],
+            "team_logo_override": team["team_logo_override"],
+            "founded_year_override": team["founded_year_override"],
+            "city_override": team["city_override"],
+            "country_override": team["country_override"],
         }
     )
     squad_payload = [player_payload(r) for r in squad]
@@ -1240,24 +1238,17 @@ def lab_showcase(limit: int = Query(8, ge=1, le=16)):
 @app.get("/api/search")
 def search(q: str = Query("", min_length=1)):
     q = q.strip()
-    normalized_q = normalize_search(q)
     like = f"%{q}%"
-    normalized_like = f"%{normalized_q}%"
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 PLAYER_SELECT
                 + """
-                WHERE per.display_name ILIKE %s
-                   OR per.full_name ILIKE %s
-                   OR t.name_default ILIKE %s
-                   OR unaccent(per.display_name) ILIKE %s
-                   OR unaccent(per.full_name) ILIKE %s
-                   OR unaccent(t.name_default) ILIKE %s
+                WHERE per.display_name ILIKE %s OR per.full_name ILIKE %s OR t.name_default ILIKE %s
                 ORDER BY per.display_name
                 LIMIT 8
                 """,
-                (like, like, like, normalized_like, normalized_like, normalized_like),
+                (like, like, like),
             )
             players = [player_payload(r) for r in cur.fetchall()]
 
@@ -1979,11 +1970,6 @@ def require_admin(x_admin_password: str | None = Header(None)) -> None:
         raise HTTPException(401, "Contraseña de administrador incorrecta")
 
 
-def normalize_search(text: str) -> str:
-    text = unicodedata.normalize("NFKD", text or "")
-    return "".join(c for c in text if not unicodedata.combining(c)).lower()
-
-
 def slugify(text: str) -> str:
     """'Yamal ficha por el Manchester United' -> 'yamal-ficha-por-el-manchester-united'"""
     text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
@@ -2218,6 +2204,190 @@ def list_market_values(limit: int = Query(30, ge=1, le=100), x_admin_password: s
         }
         for r in rows
     ]
+
+
+# ===================== PARTIDOS A MANO (panel de admin) =====================
+
+
+@app.get("/api/admin/matches/by-team/{team_id}")
+def admin_matches_by_team(team_id: str, limit: int = Query(20, ge=1, le=50), x_admin_password: str | None = Header(None)):
+    """Últimos y próximos partidos de un equipo, para elegir cuál corregir."""
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                MATCH_LIST_SQL
+                + " WHERE m.home_team_id::text = %s OR m.away_team_id::text = %s"
+                + " ORDER BY m.match_date DESC LIMIT %s",
+                (team_id, team_id, limit),
+            )
+            rows = cur.fetchall()
+    return [match_list_payload(r) for r in rows]
+
+
+@app.post("/api/admin/matches/{match_id}")
+def admin_update_match(match_id: str, payload: dict, x_admin_password: str | None = Header(None)):
+    """Corrige a mano resultado, estado y/o fecha de un partido concreto."""
+    require_admin(x_admin_password)
+    valid_status = {"scheduled", "live", "finished", "postponed", "cancelled", "awarded"}
+    status = (payload.get("status") or "").strip() or None
+    if status and status not in valid_status:
+        raise HTTPException(400, f"Estado inválido, usa uno de: {', '.join(sorted(valid_status))}")
+    home_score = payload.get("homeScore")
+    home_score = int(home_score) if home_score not in (None, "") else None
+    away_score = payload.get("awayScore")
+    away_score = int(away_score) if away_score not in (None, "") else None
+    match_date = (payload.get("matchDate") or "").strip() or None
+
+    if status in ("finished", "awarded") and (home_score is None or away_score is None):
+        # Comprobamos si ya tenía marcador antes de exigirlo — si el admin
+        # solo está corrigiendo el estado y el marcador ya existía, no forzamos.
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT home_score, away_score FROM match WHERE id = %s", (match_id,))
+                existing = cur.fetchone()
+        if not existing or existing["home_score"] is None or existing["away_score"] is None:
+            if home_score is None or away_score is None:
+                raise HTTPException(400, "Un partido terminado/adjudicado necesita marcador de los dos equipos.")
+
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE match SET
+                  status = COALESCE(%s, status),
+                  home_score = COALESCE(%s, home_score),
+                  away_score = COALESCE(%s, away_score),
+                  match_date = COALESCE(%s, match_date),
+                  updated_at = now()
+                WHERE id = %s
+                RETURNING id
+                """,
+                (status, home_score, away_score, match_date, match_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(404, "Partido no encontrado")
+    return {"ok": True}
+
+
+# ===================== RESERVAS MANUALES: JUGADOR / EQUIPO =====================
+
+
+@app.post("/api/admin/players/{player_id}/override")
+def override_player(player_id: str, payload: dict, x_admin_password: str | None = Header(None)):
+    """Corrige a mano los datos de un jugador. Deja vacío el campo que no
+    quieras tocar — solo se sobrescribe lo que mandes."""
+    require_admin(x_admin_password)
+    name = (payload.get("name") or "").strip() or None
+    photo = (payload.get("photo") or "").strip() or None
+    position = (payload.get("position") or "").strip() or None
+    foot = (payload.get("foot") or "").strip() or None
+    height = payload.get("height")
+    height = int(height) if height not in (None, "") else None
+    shirt = payload.get("shirt")
+    shirt = int(shirt) if shirt not in (None, "") else None
+    weight = payload.get("weight")
+    weight = int(weight) if weight not in (None, "") else None
+    secondary_pos = (payload.get("secondaryPosition") or "").strip() or None
+    nationality = (payload.get("nationality") or "").strip() or None
+    birth_date = (payload.get("birthDate") or "").strip() or None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE player SET
+                  name_override = COALESCE(%s, name_override),
+                  photo_url_override = COALESCE(%s, photo_url_override),
+                  position_override = COALESCE(%s, position_override),
+                  foot_override = COALESCE(%s, foot_override),
+                  height_cm_override = COALESCE(%s, height_cm_override),
+                  shirt_number_override = COALESCE(%s, shirt_number_override),
+                  weight_kg_override = COALESCE(%s, weight_kg_override),
+                  secondary_position_override = COALESCE(%s, secondary_position_override),
+                  nationality_override = COALESCE(%s, nationality_override),
+                  birth_date_override = COALESCE(%s, birth_date_override)
+                WHERE id = %s
+                RETURNING id
+                """,
+                (name, photo, position, foot, height, shirt, weight, secondary_pos, nationality, birth_date, player_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(404, "Jugador no encontrado")
+    return {"ok": True}
+
+
+@app.delete("/api/admin/players/{player_id}/override")
+def clear_player_override(player_id: str, x_admin_password: str | None = Header(None)):
+    """Quita la reserva manual, vuelve a mostrar el dato real de la API."""
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE player SET
+                  name_override = NULL, photo_url_override = NULL, position_override = NULL,
+                  foot_override = NULL, height_cm_override = NULL, shirt_number_override = NULL,
+                  weight_kg_override = NULL, secondary_position_override = NULL,
+                  nationality_override = NULL, birth_date_override = NULL
+                WHERE id = %s
+                """,
+                (player_id,),
+            )
+        conn.commit()
+    return {"ok": True}
+
+
+@app.post("/api/admin/teams/{team_id}/override")
+def override_team(team_id: str, payload: dict, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    name = (payload.get("name") or "").strip() or None
+    logo = (payload.get("logo") or "").strip() or None
+    founded = payload.get("founded")
+    founded = int(founded) if founded not in (None, "") else None
+    city = (payload.get("city") or "").strip() or None
+    country = (payload.get("country") or "").strip() or None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE team SET
+                  name_override = COALESCE(%s, name_override),
+                  logo_url_override = COALESCE(%s, logo_url_override),
+                  founded_year_override = COALESCE(%s, founded_year_override),
+                  city_override = COALESCE(%s, city_override),
+                  country_override = COALESCE(%s, country_override)
+                WHERE id = %s
+                RETURNING id
+                """,
+                (name, logo, founded, city, country, team_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(404, "Equipo no encontrado")
+    return {"ok": True}
+
+
+@app.delete("/api/admin/teams/{team_id}/override")
+def clear_team_override(team_id: str, x_admin_password: str | None = Header(None)):
+    require_admin(x_admin_password)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE team SET
+                  name_override = NULL, logo_url_override = NULL, founded_year_override = NULL,
+                  city_override = NULL, country_override = NULL
+                WHERE id = %s
+                """,
+                (team_id,),
+            )
+        conn.commit()
+    return {"ok": True}
 
 
 @app.post("/api/admin/market-value")

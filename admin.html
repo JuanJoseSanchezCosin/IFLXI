@@ -93,6 +93,16 @@
   .admin-archive-item button { background: none; border: none; cursor: pointer; font-size: .8rem; white-space: nowrap; }
   .admin-archive-item .edit-btn { color: #1d6fd6; }
   .admin-archive-item .del-btn { color: #b3261e; }
+  .admin-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; border-bottom: 1px solid var(--line, #e2e5ea); padding-bottom: 2px; }
+  .admin-tab { background: none; border: none; padding: 10px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: .9rem; cursor: pointer; color: var(--muted, #6b7280); }
+  .admin-tab:hover { background: rgba(30,58,95,.06); }
+  .admin-tab.is-active { color: #1e3a5f; background: #fff; box-shadow: 0 -2px 0 #1e3a5f inset; }
+  .admin-btn { background: #1e3a5f; }
+  .admin-btn:hover { background: #16304d; }
+  .admin-card { border-top: 3px solid #1e3a5f; box-shadow: 0 8px 24px rgba(30,58,95,.08); }
+  .admin-card h2 { color: #1e3a5f; }
+  .admin-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .admin-field-row { grid-template-columns: 1fr; } }
 </style>
 </head>
 
@@ -129,10 +139,19 @@
   </div>
 
   <div id="admin-panel" style="display:none">
-    <h1 style="margin:0 0 4px;font-family:var(--font-display, inherit);font-weight:800;letter-spacing:-0.01em;font-size:1.5rem;color:#12151f">Publicar contenido</h1>
-    <p class="hint" style="margin-bottom:24px">Rellena el formulario y dale a publicar — sale en la web al instante.</p>
+    <h1 style="margin:0 0 4px;font-family:var(--font-display, inherit);font-weight:800;letter-spacing:-0.01em;font-size:1.5rem;color:#12151f">Panel de administración</h1>
+    <p class="hint" style="margin-bottom:20px">Elige qué quieres gestionar.</p>
 
-    <div class="admin-card">
+    <nav class="admin-tabs" role="tablist">
+      <button type="button" class="admin-tab is-active" data-tab="noticias">📰 Noticias</button>
+      <button type="button" class="admin-tab" data-tab="rumores">🔥 Rumores</button>
+      <button type="button" class="admin-tab" data-tab="valores">💰 Valores</button>
+      <button type="button" class="admin-tab" data-tab="jugadores">👤 Jugadores</button>
+      <button type="button" class="admin-tab" data-tab="equipos">🛡️ Equipos</button>
+      <button type="button" class="admin-tab" data-tab="partidos">⚽ Partidos</button>
+    </nav>
+
+    <div class="admin-card" data-panel="noticias">
       <h2>Publicar noticia</h2>
       <p class="hint">Cada noticia se guarda para siempre con su propia página — nunca se borra sola. Marca "Destacada" para que sea la grande de portada (solo puede haber una a la vez).</p>
       <form id="form-news">
@@ -178,7 +197,7 @@
       <div class="admin-list" id="news-archive-list"></div>
     </div>
 
-    <div class="admin-card">
+    <div class="admin-card" data-panel="rumores">
       <h2>Rumor de fichaje</h2>
       <p class="hint">Jugador, club interesado y qué tan fiable crees que es el rumor.</p>
       <form id="form-rumor">
@@ -213,7 +232,7 @@
       <div class="admin-list" id="rumor-list"></div>
     </div>
 
-    <div class="admin-card">
+    <div class="admin-card" data-panel="valores">
       <h2>Valor de mercado</h2>
       <p class="hint">API-Football no da este dato — se carga a mano, jugador por jugador.</p>
       <form id="form-market">
@@ -231,6 +250,160 @@
         <p class="admin-msg" id="market-msg"></p>
       </form>
       <div class="admin-list" id="market-list"></div>
+    </div>
+
+    <div class="admin-card" data-panel="jugadores" style="display:none">
+      <h2>Corregir jugador</h2>
+      <p class="hint">Solo para cuando la API tenga mal (o no tenga) el nombre o la foto. Deja un campo vacío para no tocarlo.</p>
+      <form id="form-player-override">
+        <div class="admin-field" style="position:relative">
+          <label for="player-ov-search">Jugador</label>
+          <input type="text" id="player-ov-search" required placeholder="Escribe para buscar…" autocomplete="off">
+          <input type="hidden" id="player-ov-id">
+          <div id="player-ov-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+        </div>
+        <div class="admin-field">
+          <label for="player-ov-name">Nombre correcto (opcional)</label>
+          <input type="text" id="player-ov-name" placeholder="Deja vacío para no cambiarlo">
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="player-ov-position">Posición (opcional)</label>
+            <input type="text" id="player-ov-position" placeholder="Ej: Delantero centro">
+          </div>
+          <div class="admin-field">
+            <label for="player-ov-foot">Pie (opcional)</label>
+            <select id="player-ov-foot">
+              <option value="">— No cambiar —</option>
+              <option value="left">Izquierdo</option>
+              <option value="right">Derecho</option>
+              <option value="both">Ambos</option>
+            </select>
+          </div>
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="player-ov-height">Altura en cm (opcional)</label>
+            <input type="number" id="player-ov-height" min="140" max="220" placeholder="Ej: 182">
+          </div>
+          <div class="admin-field">
+            <label for="player-ov-weight">Peso en kg (opcional)</label>
+            <input type="number" id="player-ov-weight" min="40" max="150" placeholder="Ej: 75">
+          </div>
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="player-ov-shirt">Dorsal (opcional)</label>
+            <input type="number" id="player-ov-shirt" min="1" max="99" placeholder="Ej: 10">
+          </div>
+          <div class="admin-field">
+            <label for="player-ov-secondary">Posición secundaria (opcional)</label>
+            <input type="text" id="player-ov-secondary" placeholder="Ej: Extremo izquierdo">
+          </div>
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="player-ov-nationality">Nacionalidad (opcional)</label>
+            <input type="text" id="player-ov-nationality" placeholder="Ej: España">
+          </div>
+          <div class="admin-field">
+            <label for="player-ov-birth">Fecha de nacimiento (opcional)</label>
+            <input type="date" id="player-ov-birth">
+          </div>
+        </div>
+        <div class="admin-field">
+          <label for="player-ov-photo">Foto correcta (opcional)</label>
+          <input type="file" id="player-ov-photo" accept="image/*">
+        </div>
+        <button class="admin-btn" type="submit">Guardar corrección</button>
+        <button type="button" class="admin-btn" id="player-ov-clear" style="background:#b3261e;margin-left:8px">Quitar corrección (volver a la API)</button>
+        <p class="admin-msg" id="player-ov-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card" data-panel="equipos" style="display:none">
+      <h2>Corregir equipo</h2>
+      <p class="hint">Igual que con jugadores: solo para tapar un hueco de la API.</p>
+      <form id="form-team-override">
+        <div class="admin-field" style="position:relative">
+          <label for="team-ov-search">Equipo</label>
+          <input type="text" id="team-ov-search" required placeholder="Escribe para buscar…" autocomplete="off">
+          <input type="hidden" id="team-ov-id">
+          <div id="team-ov-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+        </div>
+        <div class="admin-field">
+          <label for="team-ov-name">Nombre correcto (opcional)</label>
+          <input type="text" id="team-ov-name" placeholder="Deja vacío para no cambiarlo">
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="team-ov-founded">Año de fundación (opcional)</label>
+            <input type="number" id="team-ov-founded" min="1850" max="2026" placeholder="Ej: 1919">
+          </div>
+          <div class="admin-field">
+            <label for="team-ov-city">Ciudad (opcional)</label>
+            <input type="text" id="team-ov-city" placeholder="Ej: Valencia">
+          </div>
+        </div>
+        <div class="admin-field">
+          <label for="team-ov-country">País (opcional)</label>
+          <input type="text" id="team-ov-country" placeholder="Ej: España">
+        </div>
+        <div class="admin-field">
+          <label for="team-ov-logo">Escudo correcto (opcional)</label>
+          <input type="file" id="team-ov-logo" accept="image/*">
+        </div>
+        <button class="admin-btn" type="submit">Guardar corrección</button>
+        <button type="button" class="admin-btn" id="team-ov-clear" style="background:#b3261e;margin-left:8px">Quitar corrección (volver a la API)</button>
+        <p class="admin-msg" id="team-ov-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card" data-panel="partidos" style="display:none">
+      <h2>Corregir partido</h2>
+      <p class="hint">Busca un equipo, elige el partido de la lista, y corrige resultado, estado o fecha a mano.</p>
+      <div class="admin-field" style="position:relative">
+        <label for="match-team-search">Equipo</label>
+        <input type="text" id="match-team-search" placeholder="Escribe para buscar…" autocomplete="off">
+        <input type="hidden" id="match-team-id">
+        <div id="match-team-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg,#fff);border:1px solid var(--line,#d7dae0);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12)"></div>
+      </div>
+      <div class="admin-list" id="match-list" style="margin-top:14px"></div>
+
+      <form id="form-match-edit" style="display:none;margin-top:18px;border-top:1px solid var(--line,#e2e5ea);padding-top:18px">
+        <input type="hidden" id="match-edit-id">
+        <p style="font-weight:600;margin:0 0 10px" id="match-edit-title"></p>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="match-edit-home-score">Goles local</label>
+            <input type="number" id="match-edit-home-score" min="0" placeholder="Ej: 2">
+          </div>
+          <div class="admin-field">
+            <label for="match-edit-away-score">Goles visitante</label>
+            <input type="number" id="match-edit-away-score" min="0" placeholder="Ej: 1">
+          </div>
+        </div>
+        <div class="admin-field-row">
+          <div class="admin-field">
+            <label for="match-edit-status">Estado</label>
+            <select id="match-edit-status">
+              <option value="">— No cambiar —</option>
+              <option value="scheduled">Programado</option>
+              <option value="live">En directo</option>
+              <option value="finished">Terminado</option>
+              <option value="postponed">Aplazado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="awarded">Adjudicado</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label for="match-edit-date">Fecha</label>
+            <input type="date" id="match-edit-date">
+          </div>
+        </div>
+        <button class="admin-btn" type="submit">Guardar partido</button>
+        <p class="admin-msg" id="match-edit-msg"></p>
+      </form>
     </div>
   </div>
 
@@ -619,6 +792,198 @@
       if (kind === "market") loadMarketValues();
     } catch (err) {
       alert(err.message);
+    }
+  });
+
+  // --- Pestañas ---
+  document.querySelectorAll(".admin-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".admin-tab").forEach((t) => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+      const target = tab.dataset.tab;
+      document.querySelectorAll("[data-panel]").forEach((panel) => {
+        panel.style.display = panel.dataset.panel === target ? "" : "none";
+      });
+    });
+  });
+
+  // --- Corregir jugador ---
+  wireAutocomplete({ inputId: "player-ov-search", idInputId: "player-ov-id", resultsId: "player-ov-results", source: "players" });
+
+  document.getElementById("form-player-override").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("player-ov-msg");
+    msg.className = "admin-msg";
+    const id = document.getElementById("player-ov-id").value;
+    if (!id) { msg.className = "admin-msg err"; msg.textContent = "Elige un jugador de la lista."; return; }
+    try {
+      let photo = "";
+      const file = document.getElementById("player-ov-photo").files[0];
+      if (file) {
+        msg.textContent = "Subiendo foto…";
+        photo = await uploadImage(file, "mini");
+      }
+      msg.textContent = "Guardando…";
+      await apiFetch(`/api/admin/players/${id}/override`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: document.getElementById("player-ov-name").value,
+          position: document.getElementById("player-ov-position").value,
+          secondaryPosition: document.getElementById("player-ov-secondary").value,
+          foot: document.getElementById("player-ov-foot").value,
+          height: document.getElementById("player-ov-height").value,
+          weight: document.getElementById("player-ov-weight").value,
+          shirt: document.getElementById("player-ov-shirt").value,
+          nationality: document.getElementById("player-ov-nationality").value,
+          birthDate: document.getElementById("player-ov-birth").value,
+          photo,
+        }),
+      });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Guardado ✓";
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  document.getElementById("player-ov-clear").addEventListener("click", async () => {
+    const id = document.getElementById("player-ov-id").value;
+    const msg = document.getElementById("player-ov-msg");
+    if (!id) { msg.className = "admin-msg err"; msg.textContent = "Elige un jugador de la lista."; return; }
+    if (!confirm("¿Quitar la corrección y volver a mostrar el dato de la API?")) return;
+    try {
+      await apiFetch(`/api/admin/players/${id}/override`, { method: "DELETE" });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Corrección quitada ✓";
+      document.getElementById("form-player-override").reset();
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  // --- Corregir equipo ---
+  wireAutocomplete({ inputId: "team-ov-search", idInputId: "team-ov-id", resultsId: "team-ov-results", source: "teams" });
+
+  document.getElementById("form-team-override").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("team-ov-msg");
+    msg.className = "admin-msg";
+    const id = document.getElementById("team-ov-id").value;
+    if (!id) { msg.className = "admin-msg err"; msg.textContent = "Elige un equipo de la lista."; return; }
+    try {
+      let logo = "";
+      const file = document.getElementById("team-ov-logo").files[0];
+      if (file) {
+        msg.textContent = "Subiendo escudo…";
+        logo = await uploadImage(file, "mini");
+      }
+      msg.textContent = "Guardando…";
+      await apiFetch(`/api/admin/teams/${id}/override`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: document.getElementById("team-ov-name").value,
+          founded: document.getElementById("team-ov-founded").value,
+          city: document.getElementById("team-ov-city").value,
+          country: document.getElementById("team-ov-country").value,
+          logo,
+        }),
+      });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Guardado ✓";
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  document.getElementById("team-ov-clear").addEventListener("click", async () => {
+    const id = document.getElementById("team-ov-id").value;
+    const msg = document.getElementById("team-ov-msg");
+    if (!id) { msg.className = "admin-msg err"; msg.textContent = "Elige un equipo de la lista."; return; }
+    if (!confirm("¿Quitar la corrección y volver a mostrar el dato de la API?")) return;
+    try {
+      await apiFetch(`/api/admin/teams/${id}/override`, { method: "DELETE" });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Corrección quitada ✓";
+      document.getElementById("form-team-override").reset();
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
+    }
+  });
+
+  // --- Corregir partido ---
+  wireAutocomplete({ inputId: "match-team-search", idInputId: "match-team-id", resultsId: "match-team-results", source: "teams" });
+
+  let MATCHES_CACHE = [];
+
+  async function loadTeamMatches(teamId) {
+    const list = document.getElementById("match-list");
+    list.innerHTML = "Cargando…";
+    try {
+      MATCHES_CACHE = await apiFetch(`/api/admin/matches/by-team/${teamId}?limit=20`, { method: "GET" });
+      list.innerHTML = MATCHES_CACHE.length
+        ? MATCHES_CACHE.map((m) => `
+            <div class="admin-archive-item">
+              <span class="tag-pill">${m.matchDate || "—"}</span>
+              <span style="flex:1">${m.home} ${m.homeScore ?? "–"} : ${m.awayScore ?? "–"} ${m.away}</span>
+              <span class="tag-pill">${m.status}</span>
+              <button class="edit-btn" data-match="${m.id}">Editar</button>
+            </div>`).join("")
+        : "<p class='hint'>Sin partidos para este equipo.</p>";
+    } catch (e) {
+      list.innerHTML = `<p class="admin-msg err">${e.message}</p>`;
+    }
+  }
+
+  document.getElementById("match-team-id").addEventListener("change", () => {}); // no-op, por si acaso
+  const matchTeamSearch = document.getElementById("match-team-search");
+  matchTeamSearch.addEventListener("blur", () => {
+    setTimeout(() => {
+      const id = document.getElementById("match-team-id").value;
+      if (id) loadTeamMatches(id);
+    }, 150);
+  });
+
+  document.getElementById("match-list").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-match]");
+    if (!btn) return;
+    const m = MATCHES_CACHE.find((x) => x.id === btn.dataset.match);
+    if (!m) return;
+    document.getElementById("match-edit-id").value = m.id;
+    document.getElementById("match-edit-title").textContent = `${m.home} vs ${m.away}`;
+    document.getElementById("match-edit-home-score").value = m.homeScore ?? "";
+    document.getElementById("match-edit-away-score").value = m.awayScore ?? "";
+    document.getElementById("match-edit-status").value = "";
+    document.getElementById("match-edit-date").value = m.matchDate || "";
+    document.getElementById("form-match-edit").style.display = "";
+    document.getElementById("match-edit-msg").textContent = "";
+  });
+
+  document.getElementById("form-match-edit").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("match-edit-msg");
+    msg.className = "admin-msg";
+    const id = document.getElementById("match-edit-id").value;
+    try {
+      await apiFetch(`/api/admin/matches/${id}`, {
+        method: "POST",
+        body: JSON.stringify({
+          homeScore: document.getElementById("match-edit-home-score").value,
+          awayScore: document.getElementById("match-edit-away-score").value,
+          status: document.getElementById("match-edit-status").value,
+          matchDate: document.getElementById("match-edit-date").value,
+        }),
+      });
+      msg.className = "admin-msg ok";
+      msg.textContent = "Guardado ✓";
+      const teamId = document.getElementById("match-team-id").value;
+      if (teamId) loadTeamMatches(teamId);
+    } catch (err) {
+      msg.className = "admin-msg err";
+      msg.textContent = err.message;
     }
   });
 })();
